@@ -424,6 +424,11 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
 
 /* ===== Pie ===== */
 .firma { flex: none; text-align: center; padding: 5px 16px 7px; font-size: 11px; color: var(--on-surface-variant); }
+.firma { display: flex; align-items: center; justify-content: center; gap: 4px; }
+.firma b { font-weight: 600; color: var(--on-surface); }
+.firma .corazon { width: 12px; height: 12px; fill: #e5383b; margin-left: 2px; animation: latido 1.6s ease-in-out infinite; transform-origin: center; }
+.firma-sep { margin: 0 2px; opacity: .6; }
+@keyframes latido { 0%, 60%, 100% { transform: scale(1); } 15% { transform: scale(1.22); } 30% { transform: scale(1); } 45% { transform: scale(1.12); } }
 
 @media (max-width: 1060px) { .brand-sub { display: none; } }
 @media (max-width: 900px) { .layout { grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr) 160px 160px; } .bottom-console { grid-column: 1; } }
@@ -540,7 +545,11 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
     </div>
   </main>
 
-  <footer class="firma">ORT Engine · Ghostfish Slot Manager · <span id="version-pie"></span></footer>
+  <footer class="firma">
+    Creado por <b>Philo ORT Team</b>
+    <svg class="corazon" viewBox="0 0 24 24" aria-label="con amor" role="img"><path d="M12 21s-7.5-4.6-9.6-9.3C.9 8.2 3 4.5 6.6 4.5c2.1 0 3.6 1.1 4.4 2.5.8-1.4 2.3-2.5 4.4-2.5 3.6 0 5.7 3.7 4.2 7.2C19.5 16.4 12 21 12 21z"/></svg>
+    <span class="firma-sep">·</span> <span id="version-pie"></span>
+  </footer>
 
   <!-- Aviso de actualización -->
   <div id="toast" class="toast" role="status" aria-live="polite">
