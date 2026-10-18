@@ -462,6 +462,113 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
 .slot-serial { font-size: 11.5px; font-weight: 600; line-height: 1.3; letter-spacing: .02em; }
 .slot-pn { font-size: 10.5px; line-height: 1.3; letter-spacing: .02em; }
 .slot-serial, .slot-pn { display: block; }
+
+/* ===================== Bienvenida ===================== */
+.bv { position: fixed; inset: 0; z-index: 500; display: grid; place-items: center; padding: 20px; overflow: auto;
+  --bv-bg1: #0b0f1f; --bv-bg2: #1b0e2a; --bv-card: rgba(20, 22, 40, .72); --bv-line: rgba(255,255,255,.10);
+  --bv-txt: #eef0ff; --bv-mut: #a9adc8; --bv-acc: #e95420; --bv-pri: #7aa2ff; --bv-ok: #4ade80; --bv-warn: #fbbf24; --bv-err: #f87171;
+  background: radial-gradient(1200px 700px at 15% 10%, #2a1340 0%, transparent 60%), radial-gradient(900px 600px at 90% 90%, #0f2a5a 0%, transparent 55%), linear-gradient(160deg, var(--bv-bg1), var(--bv-bg2));
+  color: var(--bv-txt); font-family: var(--font); animation: bvEntrar .45s ease both; }
+.bv[hidden] { display: none !important; }
+.bv.saliendo { animation: bvSalir .35s ease forwards; }
+@keyframes bvEntrar { from { opacity: 0; } }
+@keyframes bvSalir { to { opacity: 0; transform: scale(1.02); } }
+.bv-fondo { position: fixed; inset: 0; pointer-events: none; overflow: hidden;
+  background-image: linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px);
+  background-size: 44px 44px; mask-image: radial-gradient(circle at 50% 40%, #000 30%, transparent 75%); }
+.bv-luz { position: absolute; width: 420px; height: 420px; border-radius: 50%; filter: blur(80px); opacity: .45; animation: bvFlotar 14s ease-in-out infinite alternate; }
+.bv-luz.l1 { background: #e95420; top: -120px; left: -80px; }
+.bv-luz.l2 { background: #6d28d9; bottom: -160px; right: -60px; animation-delay: -5s; }
+.bv-luz.l3 { background: #2563eb; top: 40%; left: 55%; width: 300px; height: 300px; opacity: .3; animation-delay: -9s; }
+@keyframes bvFlotar { to { transform: translate(60px, 40px) scale(1.15); } }
+
+.bv-card { position: relative; width: min(680px, 100%); padding: 30px 36px 18px; border-radius: 28px; background: var(--bv-card);
+  border: 1px solid var(--bv-line); box-shadow: 0 30px 80px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.06); backdrop-filter: blur(18px); }
+.bv-pasos { display: flex; justify-content: center; gap: 8px; margin-bottom: 18px; }
+.bv-pasos i { width: 8px; height: 8px; border-radius: 4px; background: rgba(255,255,255,.18); transition: width .3s, background .3s; }
+.bv-pasos i.on { width: 26px; background: var(--bv-acc); }
+.bv-pasos i.hecho { background: rgba(233,84,32,.55); }
+
+.bv-paso { display: none; animation: bvPaso .4s cubic-bezier(.2,0,0,1) both; }
+.bv-paso.activo { display: block; }
+@keyframes bvPaso { from { opacity: 0; transform: translateY(10px); } }
+
+.bv-logo { width: 96px; height: 96px; margin: 2px auto 14px; border-radius: 24px; overflow: hidden; box-shadow: 0 0 0 1px rgba(255,255,255,.12), 0 18px 50px rgba(233,84,32,.35); animation: bvLatir 4s ease-in-out infinite; }
+.bv-logo img { width: 100%; height: 100%; display: block; }
+@keyframes bvLatir { 50% { box-shadow: 0 0 0 1px rgba(255,255,255,.12), 0 18px 60px rgba(233,84,32,.55); transform: translateY(-2px); } }
+.bv-h1 { text-align: center; font-size: 40px; font-weight: 700; letter-spacing: -.03em; line-height: 1.05;
+  background: linear-gradient(90deg, #ffffff 0%, #ffd8c7 45%, #e95420 100%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.bv-prompt { margin: 10px auto 0; width: max-content; max-width: 100%; padding: 6px 14px; border-radius: 10px; background: rgba(0,0,0,.35); border: 1px solid var(--bv-line); font: 13px var(--mono); color: #d7dbf5; }
+.bv-dolar { color: var(--bv-acc); font-weight: 700; }
+.bv-cursor { display: inline-block; width: 8px; height: 14px; margin-left: 2px; vertical-align: -2px; background: var(--bv-acc); animation: bvCursor 1s steps(1) infinite; }
+@keyframes bvCursor { 50% { opacity: 0; } }
+.bv-sub { text-align: center; margin-top: 10px; font-size: 13px; color: var(--bv-mut); letter-spacing: .04em; }
+.bv-feats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 22px; }
+.bv-feat { padding: 14px; border-radius: 16px; background: rgba(255,255,255,.04); border: 1px solid var(--bv-line); }
+.bv-feat b { display: block; font-size: 22px; font-weight: 700; color: #fff; margin-bottom: 4px; }
+.bv-feat span { font-size: 12px; line-height: 1.45; color: var(--bv-mut); }
+
+.bv-eyebrow { display: block; font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--bv-acc); }
+.bv-h2 { margin-top: 4px; font-size: 24px; font-weight: 700; letter-spacing: -.02em; }
+.bv-txt { margin-top: 6px; font-size: 13.5px; line-height: 1.55; color: var(--bv-mut); }
+.bv-txt b { color: #fff; }
+.centro { text-align: center; }
+
+.bv-checks { list-style: none; margin: 16px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.bv-checks li { display: flex; align-items: center; gap: 12px; padding: 11px 14px; border-radius: 14px; background: rgba(255,255,255,.04); border: 1px solid var(--bv-line); animation: bvPaso .35s both; }
+.bv-ico { flex: none; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; font-weight: 800; }
+.bv-ico.cargando { border: 2.5px solid rgba(255,255,255,.18); border-top-color: var(--bv-pri); animation: giro .8s linear infinite; }
+.bv-ico.ok { background: rgba(74,222,128,.15); color: var(--bv-ok); }
+.bv-ico.warn { background: rgba(251,191,36,.15); color: var(--bv-warn); }
+.bv-ico.error { background: rgba(248,113,113,.15); color: var(--bv-err); }
+.bv-ci { flex: 1; min-width: 0; }
+.bv-ci b { display: block; font-size: 13.5px; font-weight: 600; }
+.bv-ci span { display: block; margin-top: 1px; font-size: 11.5px; color: var(--bv-mut); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bv-ci span.det { font-family: var(--mono); font-size: 11px; color: #c8cce6; }
+.bv-tag { flex: none; font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 3px 8px; border-radius: 999px; }
+.bv-tag.ok { color: var(--bv-ok); background: rgba(74,222,128,.12); }
+.bv-tag.warn { color: var(--bv-warn); background: rgba(251,191,36,.12); }
+.bv-tag.error { color: var(--bv-err); background: rgba(248,113,113,.12); }
+.bv-tag.inst { color: #fff; background: var(--bv-acc); }
+
+.bv-msg { min-height: 20px; margin-top: 10px; font-size: 12.5px; color: var(--bv-mut); }
+.bv-msg.ok { color: var(--bv-ok); } .bv-msg.err { color: var(--bv-err); }
+.bv-campo { display: flex; flex-direction: column; gap: 6px; margin-top: 18px; }
+.bv-campo span { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--bv-mut); }
+.bv-campo input { height: 44px; padding: 0 14px; border-radius: 12px; border: 1px solid var(--bv-line); background: rgba(0,0,0,.3); color: #fff; font: 500 15px var(--mono); outline: none; }
+.bv-campo input:focus { border-color: var(--bv-acc); box-shadow: 0 0 0 3px rgba(233,84,32,.25); }
+.bv-check { display: flex; align-items: center; gap: 10px; margin-top: 14px; font-size: 13.5px; cursor: pointer; }
+.bv-check input { width: 18px; height: 18px; accent-color: var(--bv-acc); }
+.bv-nota { margin-top: 12px; padding: 10px 12px; border-radius: 12px; background: rgba(251,191,36,.08); border: 1px solid rgba(251,191,36,.25); font-size: 12px; line-height: 1.5; color: #f5deb0; }
+
+.bv-ok { width: 84px; height: 84px; margin: 6px auto 12px; }
+.bv-ok svg { width: 100%; height: 100%; fill: none; stroke-width: 3.5; stroke-linecap: round; stroke-linejoin: round; }
+.bv-ok circle { stroke: var(--bv-ok); stroke-dasharray: 151; stroke-dashoffset: 151; animation: bvTrazo .7s .1s ease forwards; }
+.bv-ok path { stroke: var(--bv-ok); stroke-dasharray: 40; stroke-dashoffset: 40; animation: bvTrazo .45s .7s ease forwards; }
+@keyframes bvTrazo { to { stroke-dashoffset: 0; } }
+.bv-tips { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 18px; }
+.bv-tips div { padding: 12px 14px; border-radius: 14px; background: rgba(255,255,255,.04); border: 1px solid var(--bv-line); }
+.bv-tips b { display: block; font-size: 13px; margin-bottom: 3px; }
+.bv-tips span { font-size: 11.5px; line-height: 1.45; color: var(--bv-mut); }
+
+.bv-acciones { display: flex; align-items: center; gap: 10px; margin-top: 22px; }
+.bv-acciones.centro { justify-content: center; }
+.bv-flex { flex: 1; }
+.bv-btn { height: 42px; padding: 0 20px; border-radius: 21px; border: 1px solid transparent; font: 600 14px var(--font); cursor: pointer; transition: transform .12s, box-shadow .2s, background .2s; }
+.bv-btn:active { transform: scale(.97); }
+.bv-btn:disabled { opacity: .5; cursor: default; }
+.bv-btn.primario { background: linear-gradient(135deg, #ff7a3d, #e95420); color: #fff; box-shadow: 0 8px 22px rgba(233,84,32,.35); }
+.bv-btn.primario:hover { box-shadow: 0 10px 28px rgba(233,84,32,.5); }
+.bv-btn.grande { height: 48px; padding: 0 30px; font-size: 15px; border-radius: 24px; }
+.bv-btn.secundario { background: rgba(255,255,255,.06); border-color: var(--bv-line); color: #fff; }
+.bv-btn.secundario:hover { background: rgba(255,255,255,.1); }
+.bv-btn.texto { background: transparent; color: var(--bv-mut); padding: 0 10px; }
+.bv-btn.texto:hover { color: #fff; }
+.bv-firma { display: flex; align-items: center; justify-content: center; gap: 5px; margin-top: 20px; padding-top: 14px; border-top: 1px solid var(--bv-line); font-size: 11.5px; color: var(--bv-mut); }
+.bv-firma b { color: #fff; font-weight: 600; }
+.bv-firma svg { width: 12px; height: 12px; fill: #e5383b; animation: latido 1.6s ease-in-out infinite; }
+.brand-logo { cursor: pointer; }
+@media (max-width: 640px) { .bv-feats, .bv-tips { grid-template-columns: 1fr; } .bv-card { padding: 24px 20px 14px; } }
   </style>
 </head>
 <body>
@@ -719,6 +826,79 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
       <div class="modal-foot">
         <button class="btn btn-text ripple" onclick="closeGlobalConfigModal()">Listo</button>
       </div>
+    </div>
+  </div>
+
+  <!-- ===================== Bienvenida (primera vez) ===================== -->
+  <div id="bienvenida" class="bv" hidden>
+    <div class="bv-fondo" aria-hidden="true"><i class="bv-luz l1"></i><i class="bv-luz l2"></i><i class="bv-luz l3"></i></div>
+    <div class="bv-card" role="dialog" aria-modal="true" aria-labelledby="bv-titulo">
+      <div class="bv-pasos" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+
+      <!-- Paso 1 -->
+      <section class="bv-paso" data-paso="1">
+        <div class="bv-logo"><img src="icons/256x256.png" alt=""></div>
+        <h1 id="bv-titulo" class="bv-h1">ORT Engine</h1>
+        <div class="bv-prompt"><span class="bv-dolar">$</span> <span id="bv-typed"></span><span class="bv-cursor"></span></div>
+        <p class="bv-sub">Gestor de slots Ghostfish · DRDT</p>
+        <div class="bv-feats">
+          <div class="bv-feat"><b>16</b><span>slots en paralelo, cada uno con su terminal</span></div>
+          <div class="bv-feat"><b>8 h</b><span>por loop, con contador y barra de avance</span></div>
+          <div class="bv-feat"><b>📱</b><span>avisos al celular y historial de cada unidad</span></div>
+        </div>
+        <div class="bv-acciones centro">
+          <button class="bv-btn primario" onclick="bvPaso(2)">Comenzar <span aria-hidden="true">→</span></button>
+        </div>
+      </section>
+
+      <!-- Paso 2 -->
+      <section class="bv-paso" data-paso="2">
+        <span class="bv-eyebrow">Paso 1 de 3</span>
+        <h2 class="bv-h2">Revisión del sistema</h2>
+        <p class="bv-txt">Reviso que esta PC tenga todo para trabajar. Lo que falte lo puedo instalar por ti.</p>
+        <ul class="bv-checks" id="bv-checks"></ul>
+        <div class="bv-msg" id="bv-msg"></div>
+        <div class="bv-acciones">
+          <button class="bv-btn texto" onclick="bvRevisar()">Volver a revisar</button>
+          <span class="bv-flex"></span>
+          <button class="bv-btn secundario" id="bv-instalar" onclick="bvInstalar()" hidden></button>
+          <button class="bv-btn primario" id="bv-sig2" onclick="bvPaso(3)">Continuar <span aria-hidden="true">→</span></button>
+        </div>
+      </section>
+
+      <!-- Paso 3 -->
+      <section class="bv-paso" data-paso="3">
+        <span class="bv-eyebrow">Paso 2 de 3</span>
+        <h2 class="bv-h2">Avisos al celular</h2>
+        <p class="bv-txt">Cada vez que entre una unidad te llega un aviso a la app <b>ntfy</b> con el slot, serial, P/N y loops.</p>
+        <label class="bv-campo"><span>Tema de ntfy</span><input id="bv-tema" type="text" placeholder="drdt" autocomplete="off" spellcheck="false"></label>
+        <label class="bv-check"><input type="checkbox" id="bv-ntfy-on" checked> Enviar un aviso cuando entre una unidad</label>
+        <div class="bv-nota">Suscríbete al mismo tema en la app ntfy de tu celular. Los temas de ntfy.sh son públicos: usa un nombre difícil de adivinar.</div>
+        <div class="bv-msg" id="bv-msg3"></div>
+        <div class="bv-acciones">
+          <button class="bv-btn texto" onclick="bvPaso(2)">← Atrás</button>
+          <span class="bv-flex"></span>
+          <button class="bv-btn secundario" id="bv-probar" onclick="bvProbarNtfy()">Enviar prueba</button>
+          <button class="bv-btn primario" onclick="bvGuardarNtfy()">Continuar <span aria-hidden="true">→</span></button>
+        </div>
+      </section>
+
+      <!-- Paso 4 -->
+      <section class="bv-paso" data-paso="4">
+        <div class="bv-ok" aria-hidden="true"><svg viewBox="0 0 52 52"><circle cx="26" cy="26" r="24"/><path d="M15 27l7 7 15-16"/></svg></div>
+        <h2 class="bv-h2 centro">¡Todo listo!</h2>
+        <p class="bv-txt centro" id="bv-resumen"></p>
+        <div class="bv-tips">
+          <div><b>Toca un slot</b><span>para leer la EEPROM y lanzar la regresión</span></div>
+          <div><b>Historial</b><span>guarda cada unidad que entra, con hora y loops</span></div>
+          <div><b>🔔 Campana</b><span>para cambiar los avisos al celular cuando quieras</span></div>
+        </div>
+        <div class="bv-acciones centro">
+          <button class="bv-btn primario grande" onclick="bvTerminar()">Entrar a ORT Engine</button>
+        </div>
+      </section>
+
+      <div class="bv-firma">Creado por <b>Philo ORT Team</b> <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.6-9.3C.9 8.2 3 4.5 6.6 4.5c2.1 0 3.6 1.1 4.4 2.5.8-1.4 2.3-2.5 4.4-2.5 3.6 0 5.7 3.7 4.2 7.2C19.5 16.4 12 21 12 21z"/></svg></div>
     </div>
   </div>
 
@@ -1641,6 +1821,112 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
       const r = await ipcRenderer.invoke('historial:carpeta');
       if (r && r.ruta) document.getElementById('hist-ruta').textContent = r.ruta;
     }
+
+
+    /* ===================== Bienvenida (primera vez) ===================== */
+    let bvChecks = [];
+    function bvPaso(n) {
+      document.querySelectorAll('.bv-paso').forEach((s) => s.classList.toggle('activo', +s.dataset.paso === n));
+      document.querySelectorAll('.bv-pasos i').forEach((d, k) => { d.classList.toggle('on', k === n - 1); d.classList.toggle('hecho', k < n - 1); });
+      if (n === 2 && !bvChecks.length) bvRevisar();
+      if (n === 3) {
+        ipcRenderer.invoke('config:leer').then((c) => {
+          const n3 = (c && c.ntfy) || {};
+          document.getElementById('bv-tema').value = n3.tema || 'drdt';
+          document.getElementById('bv-ntfy-on').checked = n3.activo !== false && n3.entrada !== false;
+        }).catch(() => {});
+        setTimeout(() => document.getElementById('bv-tema').focus(), 60);
+      }
+      if (n === 4) {
+        const ok = bvChecks.filter((c) => c.estado === 'ok').length;
+        const pend = bvChecks.filter((c) => c.estado !== 'ok').map((c) => c.nombre);
+        document.getElementById('bv-resumen').innerHTML = bvChecks.length
+          ? `${ok} de ${bvChecks.length} revisiones en orden.` + (pend.length ? `<br>Pendiente: ${pend.map(escapar).join(', ')}. Puedes revisarlo luego tocando el logo.` : ' Esta PC está lista para trabajar.')
+          : 'ORT Engine está listo.';
+      }
+    }
+
+    function bvTipear(txt) {
+      const el = document.getElementById('bv-typed'); let k = 0; el.textContent = '';
+      const t = setInterval(() => { el.textContent = txt.slice(0, ++k); if (k >= txt.length) clearInterval(t); }, 55);
+    }
+
+    async function bvRevisar() {
+      const ul = document.getElementById('bv-checks');
+      const nombres = ['Terminal de Ubuntu', 'Python 3', 'Script de lectura EEPROM', 'Script de regresión', 'Ir a la terminal', 'Sesión gráfica'];
+      ul.innerHTML = nombres.map((n) => `<li><span class="bv-ico cargando"></span><div class="bv-ci"><b>${n}</b><span>Revisando…</span></div></li>`).join('');
+      document.getElementById('bv-msg').textContent = '';
+      document.getElementById('bv-instalar').hidden = true;
+      let res = [];
+      try { res = await ipcRenderer.invoke('sistema:revisar'); } catch (e) {}
+      bvChecks = Array.isArray(res) ? res : [];
+      const icono = { ok: '✓', warn: '!', error: '✕' };
+      const etiqueta = { ok: 'Listo', warn: 'Revisar', error: 'Falta' };
+      ul.innerHTML = bvChecks.map((c, k) => `<li style="animation-delay:${k * 60}ms">
+          <span class="bv-ico ${c.estado}">${icono[c.estado]}</span>
+          <div class="bv-ci"><b>${escapar(c.nombre)}</b><span class="${c.estado === 'ok' ? 'det' : ''}" title="${escapar(c.detalle)}">${escapar(c.estado === 'ok' ? c.detalle : c.detalle)}</span></div>
+          <span class="bv-tag ${c.paquete ? 'inst' : c.estado}">${c.paquete ? 'Se puede instalar' : etiqueta[c.estado]}</span>
+        </li>`).join('');
+      const paquetes = bvChecks.filter((c) => c.paquete).map((c) => c.paquete);
+      const b = document.getElementById('bv-instalar');
+      b.hidden = !paquetes.length;
+      b.textContent = `Instalar lo que falta (${paquetes.length})`;
+      const faltan = bvChecks.filter((c) => c.estado === 'error' && !c.paquete);
+      document.getElementById('bv-msg').className = 'bv-msg' + (faltan.length ? ' err' : (bvChecks.every((c) => c.estado === 'ok') ? ' ok' : ''));
+      document.getElementById('bv-msg').textContent = faltan.length
+        ? 'Hay cosas que no se pueden instalar solas: cópialas a esta PC y presiona "Volver a revisar".'
+        : (bvChecks.length && bvChecks.every((c) => c.estado === 'ok') ? '✓ Todo en orden.' : '');
+    }
+
+    async function bvInstalar() {
+      const paquetes = bvChecks.filter((c) => c.paquete).map((c) => c.paquete);
+      if (!paquetes.length) return;
+      const b = document.getElementById('bv-instalar'), msg = document.getElementById('bv-msg');
+      b.disabled = true; msg.className = 'bv-msg';
+      msg.textContent = 'Escribe tu contraseña de Ubuntu en la ventana que aparece… (instalando ' + paquetes.join(', ') + ')';
+      const r = await ipcRenderer.invoke('sistema:instalar', paquetes);
+      b.disabled = false;
+      if (r && r.ok) { await bvRevisar(); msg.className = 'bv-msg ok'; msg.textContent = '✓ Instalación terminada.'; }
+      else { msg.className = 'bv-msg err'; msg.textContent = (r && r.cancelado) ? 'Se canceló la instalación.' : 'No se pudo instalar: ' + ((r && r.mensaje) || 'error desconocido'); }
+    }
+
+    async function bvProbarNtfy() {
+      const tema = document.getElementById('bv-tema').value.trim();
+      const msg = document.getElementById('bv-msg3');
+      if (!tema) { msg.className = 'bv-msg err'; msg.textContent = 'Escribe un tema.'; return; }
+      const b = document.getElementById('bv-probar'); b.disabled = true;
+      msg.className = 'bv-msg'; msg.textContent = 'Enviando…';
+      let c = {}; try { c = (await ipcRenderer.invoke('config:leer')).ntfy || {}; } catch (e) {}
+      const r = await ipcRenderer.invoke('ntfy:prueba', { ...c, tema });
+      b.disabled = false;
+      msg.className = 'bv-msg ' + (r && r.ok ? 'ok' : 'err');
+      msg.textContent = r && r.ok ? `✓ Enviada al tema "${tema}". Revisa tu celular.` : `No se pudo enviar: ${(r && r.mensaje) || 'error'}.`;
+    }
+
+    async function bvGuardarNtfy() {
+      const tema = document.getElementById('bv-tema').value.trim() || 'drdt';
+      const on = document.getElementById('bv-ntfy-on').checked;
+      try { await ipcRenderer.invoke('config:guardar', { tema, activo: on, entrada: on }); marcarCampana({ activo: on, tema }); } catch (e) {}
+      bvPaso(4);
+    }
+
+    function iniciarBienvenida() {
+      const bv = document.getElementById('bienvenida');
+      bv.classList.remove('saliendo'); bv.hidden = false;
+      bvChecks = [];
+      bvPaso(1);
+      bvTipear('ghostfish --slots 16 --loops 0..7');
+    }
+    async function bvTerminar() {
+      try { await ipcRenderer.invoke('config:bienvenida', true); } catch (e) {}
+      const bv = document.getElementById('bienvenida');
+      bv.classList.add('saliendo');
+      setTimeout(() => { bv.hidden = true; bv.classList.remove('saliendo'); }, 340);
+      tele('¡Bienvenido a ORT Engine!', 'ok');
+    }
+    document.querySelector('.brand-logo').title = 'Ver la bienvenida y revisar el sistema';
+    document.querySelector('.brand-logo').addEventListener('click', iniciarBienvenida);
+    ipcRenderer.invoke('config:leer').then((c) => { if (!c || !c.bienvenida) iniciarBienvenida(); }).catch(() => {});
 
     /* ---------- Efecto de onda al hacer clic (estilo Material) ---------- */
     document.addEventListener('pointerdown', (e) => {

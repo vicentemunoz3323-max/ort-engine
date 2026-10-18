@@ -543,3 +543,67 @@ ipcMain.handle('ntfy:prueba', (_e, n) => publicarNtfy(n, {
   tags: ['bell'],
   priority: 3
 }));
+
+/* ---------- Asistente de bienvenida: revisar e instalar lo necesario ---------- */
+function comandoExiste(cmd) {
+  return new Promise((resolve) => exec(`command -v ${cmd}`, (err, out) => resolve(!err && String(out).trim() ? String(out).trim() : null)));
+}
+function versionDe(cmd) {
+  return new Promise((resolve) => exec(cmd, { timeout: 5000 }, (err, out, errOut) => resolve(err ? null : String(out || errOut).trim())));
+}
+
+ipcMain.handle('sistema:revisar', async () => {
+  const home = app.getPath('home');
+  const [terminal, python, wmctrl, eeprom] = await Promise.all([
+    comandoExiste('gnome-terminal'),
+    versionDe('python3 --version'),
+    comandoExiste('wmctrl'),
+    buscarScript('read_eeprom_ghostfish.py')
+  ]);
+  const regresion = path.join(home, 'viper-test/opentest/tools/ot_regression.py');
+  const sesion = (process.env.XDG_SESSION_TYPE || 'desconocida').toLowerCase();
+
+  return [
+    { id: 'terminal', nombre: 'Terminal de Ubuntu', desc: 'Abre una terminal por cada slot',
+      estado: terminal ? 'ok' : 'error', detalle: terminal ? 'gnome-terminal instalado' : 'No está instalada', paquete: terminal ? null : 'gnome-terminal' },
+    { id: 'python', nombre: 'Python 3', desc: 'Ejecuta los scripts de lectura',
+      estado: python ? 'ok' : 'error', detalle: python || 'No está instalado', paquete: python ? null : 'python3' },
+    { id: 'eeprom', nombre: 'Script de lectura EEPROM', desc: 'read_eeprom_ghostfish.py',
+      estado: eeprom ? 'ok' : 'error', detalle: eeprom ? eeprom.replace(home, '~') : 'No encontrado. Cópialo a tu Escritorio, Documentos o ~/scripts', paquete: null },
+    { id: 'regresion', nombre: 'Script de regresión', desc: 'ot_regression.py de viper-test',
+      estado: fs.existsSync(regresion) ? 'ok' : 'warn', detalle: fs.existsSync(regresion) ? '~/viper-test/opentest/tools/ot_regression.py' : 'No está en ~/viper-test/opentest/tools/ (necesario en la PC de pruebas)', paquete: null },
+    { id: 'wmctrl', nombre: 'Ir a la terminal', desc: 'Trae al frente la terminal de cada slot (wmctrl)',
+      estado: wmctrl ? 'ok' : 'warn', detalle: wmctrl ? 'wmctrl instalado' : 'Falta instalar wmctrl', paquete: wmctrl ? null : 'wmctrl' },
+    { id: 'sesion', nombre: 'Sesión gráfica', desc: 'X11 permite traer ventanas al frente',
+      estado: sesion === 'x11' ? 'ok' : 'warn', detalle: sesion === 'x11' ? 'X11' : `${sesion}: elige "Ubuntu en Xorg" al iniciar sesión para usar "Ir a la terminal"`, paquete: null }
+  ];
+});
+
+// Instala paquetes con la ventana de contraseña de Ubuntu (pkexec). Solo paquetes permitidos.
+const PAQUETES_PERMITIDOS = new Set(['wmctrl', 'gnome-terminal', 'python3']);
+ipcMain.handle('sistema:instalar', (_e, paquetes) => {
+  const lista = (Array.isArray(paquetes) ? paquetes : []).filter((p) => PAQUETES_PERMITIDOS.has(p));
+  if (!lista.length) return { ok: true, nada: true };
+  return new Promise((resolve) => {
+    const proc = spawn('pkexec', ['env', 'DEBIAN_FRONTEND=noninteractive', 'apt-get', 'install', '-y', ...lista], { stdio: ['ignore', 'pipe', 'pipe'] });
+    let salida = '';
+    proc.stdout.on('data', (d) => { salida += d; });
+    proc.stderr.on('data', (d) => { salida += d; });
+    const limite = setTimeout(() => { try { proc.kill(); } catch (e) {} }, 5 * 60 * 1000);
+    proc.on('error', (err) => { clearTimeout(limite); resolve({ ok: false, mensaje: 'No se pudo pedir permisos: ' + err.message }); });
+    proc.on('close', (code) => {
+      clearTimeout(limite);
+      puedeEnfocar = null;                       // volver a revisar si ya se puede "Ir a la terminal"
+      if (code === 0) resolve({ ok: true });
+      else if (code === 126 || code === 127) resolve({ ok: false, cancelado: true, mensaje: 'Se canceló la contraseña' });
+      else resolve({ ok: false, mensaje: (salida.trim().split('\n').pop() || `Error ${code}`).slice(0, 200) });
+    });
+  });
+});
+
+// Marca que el asistente ya se vio
+ipcMain.handle('config:bienvenida', (_e, vista) => {
+  const c = leerConfig();
+  c.bienvenida = vista ? { vista: true, version: app.getVersion(), fecha: Date.now() } : null;
+  return { ok: guardarConfig(c) };
+});
