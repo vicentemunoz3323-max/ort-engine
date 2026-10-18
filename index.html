@@ -1,0 +1,1587 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <title>ORT Engine · Ghostfish</title>
+  <style>
+/* ===== Tipografía incluida en la app (se ve igual en cualquier PC) ===== */
+@font-face { font-family: "ORT Inter"; src: url("fonts/Inter-Regular.otf") format("opentype"); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: "ORT Inter"; src: url("fonts/Inter-Medium.otf") format("opentype"); font-weight: 500; font-style: normal; font-display: swap; }
+@font-face { font-family: "ORT Inter"; src: url("fonts/Inter-SemiBold.otf") format("opentype"); font-weight: 600; font-style: normal; font-display: swap; }
+@font-face { font-family: "ORT Inter"; src: url("fonts/Inter-Bold.otf") format("opentype"); font-weight: 700; font-style: normal; font-display: swap; }
+@font-face { font-family: "ORT Mono"; src: url("fonts/DejaVuSansMono.ttf") format("truetype"); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: "ORT Mono"; src: url("fonts/DejaVuSansMono-Bold.ttf") format("truetype"); font-weight: 700; font-style: normal; font-display: swap; }
+
+/* ===== Colores estilo Google (Material Design 3) ===== */
+:root {
+  --primary: #0b57d0;
+  --on-primary: #ffffff;
+  --primary-container: #d3e3fd;
+  --on-primary-container: #041e49;
+  --secondary-container: #c2e7ff;
+  --on-secondary-container: #001d35;
+
+  --bg: #f8fafd;
+  --surface: #ffffff;
+  --surface-low: #f0f4f9;
+  --surface-high: #e9eef6;
+  --on-surface: #1f1f1f;
+  --on-surface-variant: #444746;
+  --outline: #747775;
+  --outline-variant: #c4c7c5;
+
+  --success: #146c2e;
+  --success-container: #c4eed0;
+  --on-success-container: #072711;
+  --warning: #7a5900;
+  --warning-container: #ffdf99;
+  --on-warning-container: #261a00;
+  --error: #b3261e;
+  --error-container: #f9dedc;
+  --on-error-container: #410e0b;
+
+  --terminal: #1e1f20;
+  --terminal-head: #282a2c;
+  --terminal-text: #e3e3e3;
+
+  --shadow-1: 0 1px 2px rgba(0,0,0,.3), 0 1px 3px 1px rgba(0,0,0,.15);
+  --shadow-2: 0 1px 2px rgba(0,0,0,.3), 0 2px 6px 2px rgba(0,0,0,.15);
+  --shadow-3: 0 4px 8px 3px rgba(0,0,0,.15), 0 1px 3px rgba(0,0,0,.3);
+
+  --font: "ORT Inter", "Inter", Roboto, "Noto Sans", Ubuntu, "Segoe UI", Arial, sans-serif;
+  --mono: "ORT Mono", "DejaVu Sans Mono", "Ubuntu Mono", Consolas, monospace;
+}
+:root[data-theme="dark"] {
+  --primary: #a8c7fa;
+  --on-primary: #062e6f;
+  --primary-container: #0842a0;
+  --on-primary-container: #d3e3fd;
+  --secondary-container: #004a77;
+  --on-secondary-container: #c2e7ff;
+
+  --bg: #131314;
+  --surface: #1e1f20;
+  --surface-low: #1b1b1c;
+  --surface-high: #282a2c;
+  --on-surface: #e3e3e3;
+  --on-surface-variant: #c4c7c5;
+  --outline: #8e918f;
+  --outline-variant: #444746;
+
+  --success: #6dd58c;
+  --success-container: #0f5223;
+  --on-success-container: #c4eed0;
+  --warning: #ffd665;
+  --warning-container: #574500;
+  --on-warning-container: #ffdf99;
+  --error: #f2b8b5;
+  --error-container: #8c1d18;
+  --on-error-container: #f9dedc;
+
+  --terminal: #0e0e0f;
+  --terminal-head: #1b1b1c;
+
+  --shadow-1: 0 1px 3px 1px rgba(0,0,0,.35), 0 1px 2px rgba(0,0,0,.5);
+  --shadow-2: 0 2px 6px 2px rgba(0,0,0,.35), 0 1px 2px rgba(0,0,0,.5);
+  --shadow-3: 0 4px 8px 3px rgba(0,0,0,.35), 0 1px 3px rgba(0,0,0,.5);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; }
+body { display: flex; flex-direction: column; font-family: var(--font); font-feature-settings: "cv11", "ss03"; text-rendering: optimizeLegibility; background: var(--bg); color: var(--on-surface); -webkit-font-smoothing: antialiased; transition: background .3s, color .3s; }
+:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+button { font-family: inherit; }
+svg { display: block; }
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: var(--outline-variant); border: 3px solid transparent; background-clip: padding-box; border-radius: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+
+/* ===== Efecto de onda ===== */
+.ripple { position: relative; overflow: hidden; }
+.onda { position: absolute; border-radius: 50%; background: currentColor; opacity: .18; transform: scale(0); animation: onda .55s ease-out forwards; pointer-events: none; }
+@keyframes onda { to { transform: scale(1); opacity: 0; } }
+
+/* ===== Barra superior ===== */
+.topbar { flex: none; height: 50px; padding: 0 12px 0 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.brand { display: flex; align-items: center; gap: 12px; }
+.brand-logo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: inherit; background: var(--surface); }
+.brand-logo { position: relative; overflow: hidden; width: 32px; height: 32px; border-radius: 8px !important; border-radius: 50%; display: grid; place-items: center; background: var(--primary); color: var(--on-primary); font: 700 11px var(--font); letter-spacing: -.02em; }
+.brand-name { font-size: 16px; font-weight: 600; letter-spacing: -.02em; }
+.brand-sub { font-size: 12px; color: var(--on-surface-variant); margin-left: 2px; }
+.top-actions { display: flex; align-items: center; gap: 4px; }
+.version-chip { height: 26px; padding: 0 10px; margin-right: 6px; display: inline-flex; align-items: center; border-radius: 8px; border: 1px solid var(--outline-variant); font: 500 11px var(--font); font-variant-numeric: tabular-nums; color: var(--on-surface-variant); }
+
+.icon-btn { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; border: 0; background: transparent; color: var(--on-surface-variant); cursor: pointer; transition: background .2s; }
+.icon-btn:hover { background: color-mix(in srgb, var(--on-surface) 8%, transparent); }
+.icon-btn svg { width: 22px; height: 22px; }
+.icon-btn .punto { display: none; position: absolute; top: 8px; right: 8px; width: 8px; height: 8px; border-radius: 50%; background: var(--error); box-shadow: 0 0 0 2px var(--bg); }
+.icon-btn.hay-nueva { color: var(--primary); }
+.icon-btn.hay-nueva .punto { display: block; }
+.icon-btn.girando svg { animation: giro 1s linear infinite; }
+@keyframes giro { to { transform: rotate(360deg); } }
+.ic-sol { display: none; }
+:root[data-theme="dark"] .ic-sol { display: block; }
+:root[data-theme="dark"] .ic-luna { display: none; }
+
+/* ===== Contenido ===== */
+main { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 10px; padding: 2px 16px 0; }
+
+.head { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding: 0 4px; }
+.head h1 { font-size: 19px; font-weight: 600; letter-spacing: -.02em; line-height: 1.2; }
+.head p { font-size: 12px; color: var(--on-surface-variant); margin-top: 2px; }
+.head-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+/* Botones Material */
+.btn { height: 36px; padding: 0 18px 0 14px; display: inline-flex; align-items: center; gap: 7px; border-radius: 18px; border: 0; font: 500 13px var(--font); letter-spacing: .01em; cursor: pointer; transition: box-shadow .2s, background .2s; white-space: nowrap; }
+.btn svg { width: 16px; height: 16px; flex: none; }
+.btn-filled { background: var(--primary); color: var(--on-primary); }
+.btn-filled:hover { box-shadow: var(--shadow-1); }
+.btn-tonal { background: var(--secondary-container); color: var(--on-secondary-container); }
+.btn-tonal:hover { box-shadow: var(--shadow-1); }
+.btn-outlined { background: transparent; color: var(--primary); border: 1px solid var(--outline); }
+.btn-outlined:hover { background: color-mix(in srgb, var(--primary) 8%, transparent); }
+.btn-outlined.peligro { color: var(--error); }
+.btn-outlined.peligro:hover { background: color-mix(in srgb, var(--error) 8%, transparent); }
+.btn-text { height: 36px; padding: 0 12px; background: transparent; color: var(--primary); }
+.btn-text:hover { background: color-mix(in srgb, var(--primary) 8%, transparent); }
+
+/* Interruptor estilo Android */
+.switch { display: inline-flex; align-items: center; gap: 9px; height: 36px; padding: 0 12px 0 6px; border-radius: 18px; cursor: pointer; user-select: none; font-size: 13px; font-weight: 500; color: var(--on-surface-variant); transition: background .2s; }
+.switch:hover { background: color-mix(in srgb, var(--on-surface) 6%, transparent); }
+.switch input { position: absolute; opacity: 0; width: 0; height: 0; }
+.sw-track { position: relative; width: 52px; height: 32px; border-radius: 16px; background: var(--surface-high); border: 2px solid var(--outline); transition: background .2s, border-color .2s; }
+.sw-thumb { position: absolute; top: 50%; left: 6px; width: 16px; height: 16px; margin-top: -8px; border-radius: 50%; background: var(--outline); display: grid; place-items: center; transition: left .2s cubic-bezier(.2,0,0,1), width .2s, height .2s, margin .2s, background .2s; }
+.sw-thumb svg { width: 16px; height: 16px; color: var(--primary-container); opacity: 0; transition: opacity .2s; }
+.switch input:checked + .sw-track { background: var(--primary); border-color: var(--primary); }
+.switch input:checked + .sw-track .sw-thumb { left: 22px; width: 24px; height: 24px; margin-top: -12px; background: var(--on-primary); }
+.switch input:checked + .sw-track .sw-thumb svg { opacity: 1; color: var(--on-primary-container); }
+:root[data-theme="dark"] .switch input:checked + .sw-track .sw-thumb svg { color: var(--primary-container); }
+.switch input:checked ~ .sw-lbl { color: var(--primary); }
+.switch input:focus-visible + .sw-track { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+/* Filtros */
+.chips { flex: none; display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.chip { height: 28px; padding: 0 12px 0 9px; display: inline-flex; align-items: center; gap: 7px; border-radius: 8px; border: 1px solid var(--outline-variant); background: transparent; color: var(--on-surface-variant); font: 500 12px var(--font); cursor: pointer; transition: background .2s, border-color .2s, color .2s; }
+.chip:hover { background: color-mix(in srgb, var(--on-surface) 6%, transparent); }
+.chip .ch-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--outline); }
+.chip b { min-width: 20px; height: 18px; padding: 0 6px; display: grid; place-items: center; border-radius: 10px; background: var(--surface-high); font: 600 10px var(--font); font-variant-numeric: tabular-nums; color: var(--on-surface); }
+.chip[aria-pressed="true"] { background: var(--secondary-container); border-color: transparent; color: var(--on-secondary-container); }
+.chip[aria-pressed="true"] b { background: var(--surface); }
+.chip.f-ok .ch-dot { background: var(--success); }
+.chip.f-run .ch-dot { background: #e0a800; }
+.chip.f-err .ch-dot { background: var(--error); }
+.chip.f-idle .ch-dot { background: var(--outline-variant); }
+.chip.f-all .ch-dot { background: var(--primary); }
+
+/* ===== Distribución ===== */
+.layout { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 300px; grid-template-rows: minmax(0, 1fr) clamp(104px, 17vh, 200px); gap: 12px; }
+.card { min-height: 0; display: flex; flex-direction: column; background: var(--surface); border-radius: 16px; box-shadow: var(--shadow-1); overflow: hidden; }
+:root[data-theme="dark"] .card { box-shadow: none; }
+.card-head { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 12px 6px 16px; min-height: 40px; }
+.card-title { font-size: 13px; font-weight: 500; }
+.card-meta { font-size: 11px; color: var(--on-surface-variant); }
+
+/* ===== Slots ===== */
+.slots-panel { flex: 1; min-height: 0; padding: 4px 12px 12px; display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(4, 1fr); gap: 7px; }
+.slot-card {
+  position: relative; min-height: 0; overflow: hidden;
+  display: flex; flex-direction: column; justify-content: space-between; gap: 0;
+  padding: 6px 10px 7px 12px; border-radius: 12px; cursor: pointer;
+  background: var(--surface-low); color: var(--on-surface);
+  border: 1px solid transparent;
+  transition: background .25s, box-shadow .2s, opacity .25s, transform .15s;
+}
+.slot-card:hover { box-shadow: var(--shadow-2); }
+.slot-card:active { transform: scale(.99); }
+.slot-card.dim { opacity: .3; }
+.slot-top { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.slot-number { font-size: 10px; font-weight: 600; letter-spacing: .06em; color: var(--on-surface-variant); }
+.slot-tools { display: flex; align-items: center; gap: 4px; }
+.config-toggle-btn { width: 22px; height: 22px; display: grid; place-items: center; border: 0; border-radius: 50%; background: transparent; color: var(--on-surface-variant); cursor: pointer; transition: background .2s, color .2s; }
+.config-toggle-btn svg { width: 15px; height: 15px; }
+.config-toggle-btn:hover { background: color-mix(in srgb, var(--primary) 12%, transparent); color: var(--primary); }
+.term-btn { display: none; width: 22px; height: 22px; place-items: center; border: 0; border-radius: 50%; background: transparent; color: var(--on-surface-variant); cursor: pointer; transition: background .2s, color .2s; }
+.term-btn svg { width: 15px; height: 15px; }
+.term-btn:hover { background: color-mix(in srgb, var(--primary) 12%, transparent); color: var(--primary); }
+.slot-card.tiene-terminal .term-btn { display: grid; }
+.slot-card.tiene-terminal .term-btn { color: var(--success); }
+
+.term-menu { position: absolute; inset: 0; z-index: 6; display: flex; flex-direction: column; justify-content: center; gap: 4px; padding: 6px 8px; background: var(--surface); border: 2px solid var(--primary); border-radius: 12px; cursor: default; animation: aparecer .15s cubic-bezier(.2,0,0,1); }
+.tm-btn { height: 24px; display: flex; align-items: center; gap: 7px; padding: 0 10px; border: 0; border-radius: 12px; background: transparent; color: var(--on-surface); font: 500 11px var(--font); cursor: pointer; text-align: left; }
+.tm-btn svg { width: 15px; height: 15px; flex: none; color: var(--on-surface-variant); }
+.tm-btn:hover { background: color-mix(in srgb, var(--on-surface) 8%, transparent); }
+.tm-btn.peligro, .tm-btn.peligro svg { color: var(--error); }
+.tm-btn.peligro:hover { background: color-mix(in srgb, var(--error) 10%, transparent); }
+.tm-btn.cancelar { color: var(--on-surface-variant); justify-content: center; }
+
+.slot-led { width: 10px; height: 10px; border-radius: 50%; background: var(--outline-variant); transition: background .3s, box-shadow .3s; }
+
+.slot-serial { font: 600 12.5px/1.25 var(--font); letter-spacing: -.01em; font-variant-numeric: tabular-nums slashed-zero; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.slot-id { display: flex; flex-direction: column; min-width: 0; }
+.slot-pn { font: 500 10.5px/1.3 var(--font); color: var(--on-surface-variant); font-variant-numeric: tabular-nums slashed-zero; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-height: 13px; }
+.slot-pn:not(:empty)::before { content: "P/N "; opacity: .7; }
+.slot-bottom { display: flex; align-items: center; justify-content: space-between; gap: 6px; min-width: 0; }
+.slot-loop { flex: 1; min-width: 0; font: 500 11px var(--font); color: var(--on-surface-variant); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.slot-loop b { font-weight: 700; color: var(--on-surface); }
+
+/* Barra de tiempo: un segmento por loop (8 h cada uno) */
+.loop-bar { display: flex; gap: 2px; height: 5px; margin-top: 3px; }
+.loop-bar i { position: relative; flex: 1; border-radius: 3px; background: color-mix(in srgb, var(--on-surface) 10%, transparent); overflow: hidden; }
+.loop-bar i::after { content: ""; position: absolute; inset: 0 auto 0 0; width: var(--p, 0%); border-radius: 3px; background: var(--primary); }
+.loop-bar i.hecho::after { width: 100%; background: var(--success); }
+.loop-bar i.actual::after { background: var(--primary); }
+.slot-card.terminado .loop-bar i::after { background: var(--success); width: 100%; }
+.slot-card.terminado .slot-status { background: var(--success); color: #fff; }
+:root[data-theme="dark"] .slot-card.terminado .slot-status { color: #062e15; }
+.slot-card:not(.active) .loop-bar { opacity: .55; }
+.slot-card.corriendo.active .slot-status { display: none; }
+.slot-card.terminado .slot-loop b { color: var(--success); }
+.slot-part { display: none; flex: 1; min-width: 0; font: 500 11px var(--font); font-variant-numeric: tabular-nums slashed-zero; color: var(--on-surface-variant); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.slot-status { flex: none; height: 18px; padding: 0 8px; display: inline-flex; align-items: center; border-radius: 9px; font-size: 10px; font-weight: 500; background: var(--surface-high); color: var(--on-surface-variant); }
+
+/* Barra de progreso mientras lee */
+.slot-progress { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; overflow: hidden; opacity: 0; transition: opacity .2s; background: color-mix(in srgb, #e0a800 25%, transparent); }
+.slot-progress i { position: absolute; top: 0; bottom: 0; width: 40%; background: #e0a800; border-radius: 3px; animation: barrido 1.3s cubic-bezier(.4,0,.2,1) infinite; }
+@keyframes barrido { from { left: -40%; } to { left: 100%; } }
+
+.slot-card.booting { background: color-mix(in srgb, var(--warning-container) 55%, var(--surface)); }
+.slot-card.booting .slot-led { background: #e0a800; animation: parpadeo 1s ease-in-out infinite; }
+.slot-card.booting .slot-status { background: var(--warning-container); color: var(--on-warning-container); }
+.slot-card.booting .slot-progress { opacity: 1; }
+
+.slot-card.active { background: color-mix(in srgb, var(--success-container) 55%, var(--surface)); }
+.slot-card.active .slot-led { background: var(--success); box-shadow: 0 0 0 3px color-mix(in srgb, var(--success) 25%, transparent); }
+.slot-card.active .slot-status { background: var(--success-container); color: var(--on-success-container); }
+
+.slot-card.error { background: color-mix(in srgb, var(--error-container) 60%, var(--surface)); }
+.slot-card.error .slot-led { background: var(--error); animation: parpadeo .7s ease-in-out infinite; }
+.slot-card.error .slot-status { background: var(--error-container); color: var(--on-error-container); }
+
+@keyframes parpadeo { 0%, 100% { opacity: 1; } 50% { opacity: .3; } }
+
+/* Ajuste rápido de loops dentro de la tarjeta */
+.slot-config { position: absolute; inset: 0; z-index: 5; display: flex; flex-direction: column; justify-content: center; gap: 4px; padding: 8px 12px; background: var(--surface); border: 2px solid var(--primary); border-radius: 12px; cursor: default; }
+.sc-head { display: flex; align-items: baseline; justify-content: space-between; font-size: 12px; font-weight: 500; color: var(--on-surface-variant); }
+.sc-head b { font: 700 18px var(--font); font-variant-numeric: tabular-nums; color: var(--primary); }
+input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; }
+.sc-ok { align-self: flex-end; height: 28px; padding: 0 14px; border: 0; border-radius: 14px; background: var(--primary); color: var(--on-primary); font: 500 12px var(--font); cursor: pointer; }
+
+/* ===== Actividad ===== */
+.telemetry-screen { flex: 1; min-height: 0; overflow-y: auto; padding: 2px 8px 8px; }
+.tl { display: flex; gap: 9px; align-items: flex-start; padding: 7px 10px; border-radius: 10px; font-size: 12px; line-height: 1.4; }
+.tl + .tl { margin-top: 2px; }
+.tl::before { content: ""; flex: none; width: 8px; height: 8px; margin-top: 6px; border-radius: 50%; background: var(--primary); }
+.tl.ok::before { background: var(--success); }
+.tl.warn::before { background: #e0a800; }
+.tl.err { background: color-mix(in srgb, var(--error-container) 45%, transparent); }
+.tl.err::before { background: var(--error); }
+.tl-t { order: 2; margin-left: auto; flex: none; font: 500 10px/1.8 var(--font); font-variant-numeric: tabular-nums; color: var(--on-surface-variant); }
+.tl > span:last-child { order: 1; min-width: 0; }
+.tl code { font: 11px var(--mono); word-break: break-all; }
+
+/* ===== Consola ===== */
+.bottom-console { grid-column: 1 / 3; min-height: 0; display: flex; flex-direction: column; background: var(--terminal); border-radius: 16px; overflow: hidden; }
+.uc-head { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 4px 8px 4px 16px; background: var(--terminal-head); color: var(--terminal-text); font-size: 12px; font-weight: 500; }
+.uc-dots { display: flex; gap: 6px; margin-right: 6px; }
+.uc-dots i { width: 10px; height: 10px; border-radius: 50%; background: #5f6368; }
+.uc-title { display: flex; align-items: center; gap: 8px; }
+.uc-btn { height: 30px; padding: 0 14px; border: 0; border-radius: 15px; background: transparent; color: #a8c7fa; font: 500 12px var(--font); cursor: pointer; }
+.uc-btn:hover { background: rgba(168,199,250,.12); }
+.console-output { flex: 1; min-height: 0; overflow-y: auto; padding: 8px 16px; font: 11px/1.55 var(--mono); color: var(--terminal-text); white-space: pre-wrap; word-break: break-all; }
+
+/* ===== Diálogo de loops ===== */
+.modal-overlay { position: fixed; inset: 0; z-index: 100; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,.32); }
+.modal-content { width: 640px; max-width: calc(100vw - 32px); max-height: 86vh; display: flex; flex-direction: column; background: var(--surface-high); color: var(--on-surface); border-radius: 28px; box-shadow: var(--shadow-3); animation: aparecer .2s cubic-bezier(.2,0,0,1); }
+@keyframes aparecer { from { opacity: 0; transform: scale(.95); } }
+.modal-header { flex: none; padding: 24px 24px 12px; }
+.modal-header h2 { font-size: 20px; font-weight: 400; }
+.modal-header p { font-size: 13px; color: var(--on-surface-variant); margin-top: 6px; }
+.modal-body { flex: 1; overflow-y: auto; display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; padding: 8px 24px; }
+.slot-config-row { display: flex; align-items: center; gap: 12px; padding: 8px 14px; border-radius: 12px; background: var(--surface); }
+.scr-n { flex: none; width: 52px; font-size: 12px; font-weight: 500; color: var(--on-surface-variant); }
+.scr-v { flex: none; width: 24px; height: 24px; display: grid; place-items: center; border-radius: 50%; background: var(--primary-container); color: var(--on-primary-container); font: 600 12px var(--font); font-variant-numeric: tabular-nums; }
+.modal-foot { flex: none; display: flex; justify-content: flex-end; gap: 8px; padding: 16px 24px 20px; }
+
+/* ===== Aviso inferior (snackbar) ===== */
+.toast { position: fixed; left: 16px; bottom: 16px; z-index: 200; width: 380px; max-width: calc(100vw - 32px); display: flex; gap: 14px; padding: 14px 16px; border-radius: 12px; background: #313033; color: #f4eff4; box-shadow: var(--shadow-3); opacity: 0; transform: translateY(16px); pointer-events: none; transition: opacity .25s, transform .25s cubic-bezier(.2,0,0,1); }
+:root[data-theme="dark"] .toast { background: #e6e1e5; color: #313033; }
+.toast.visible { opacity: 1; transform: none; pointer-events: auto; }
+.toast-icono { flex: none; width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: rgba(168,199,250,.18); color: #a8c7fa; }
+:root[data-theme="dark"] .toast-icono { background: rgba(11,87,208,.12); color: #0b57d0; }
+.toast.ok .toast-icono { background: rgba(109,213,140,.18); color: #6dd58c; }
+.toast.err .toast-icono { background: rgba(242,184,181,.18); color: #f2b8b5; }
+.toast-icono svg { width: 18px; height: 18px; }
+.toast-cuerpo { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.toast-cuerpo strong { font-size: 13px; font-weight: 500; }
+.toast-cuerpo span { font-size: 12px; line-height: 1.4; opacity: .8; }
+.toast-barra { height: 4px; margin-top: 8px; border-radius: 2px; background: rgba(168,199,250,.25); overflow: hidden; }
+.toast-barra i { display: block; height: 100%; width: 0; border-radius: 2px; background: #a8c7fa; transition: width .3s; }
+:root[data-theme="dark"] .toast-barra i { background: #0b57d0; }
+.toast-acciones { display: flex; justify-content: flex-end; gap: 4px; margin-top: 6px; }
+.toast-acciones button { height: 32px; padding: 0 12px; border: 0; border-radius: 16px; background: transparent; color: #a8c7fa; font: 500 13px var(--font); cursor: pointer; }
+:root[data-theme="dark"] .toast-acciones button { color: #0b57d0; }
+.toast-acciones button:hover { background: rgba(168,199,250,.12); }
+[hidden] { display: none !important; }
+
+/* ===== Historial ===== */
+.modal-content.hist { width: 1060px; height: 86vh; max-height: none; border-radius: 24px; background: var(--surface); }
+.hist-head { flex: none; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 20px 20px 8px 24px; }
+.hist-head h2 { font-size: 20px; font-weight: 600; letter-spacing: -.02em; }
+.hist-head p { font-size: 12px; color: var(--on-surface-variant); margin-top: 3px; }
+.hist-bar { flex: none; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 6px 24px 10px; }
+.hist-search { flex: 1 1 240px; height: 36px; display: flex; align-items: center; gap: 8px; padding: 0 14px; border-radius: 18px; background: var(--surface-high); border: 1px solid var(--contorno-suave, var(--outline-variant)); }
+.hist-search:focus-within { border-color: var(--primary); }
+.hist-search svg { width: 16px; height: 16px; flex: none; color: var(--on-surface-variant); }
+.hist-search input { flex: 1; min-width: 0; border: 0; outline: none; background: transparent; color: var(--on-surface); font: 500 13px var(--font); }
+.hist-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.hist-chips .chip { height: 30px; }
+.ch-dot.hd-run { background: var(--primary); }
+.ch-dot.hd-ok { background: var(--success); }
+.ch-dot.hd-stop { background: #e0a800; }
+.hist-select { height: 32px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--contorno-suave, var(--outline-variant)); background: var(--surface); color: var(--on-surface); font: 500 12px var(--font); cursor: pointer; }
+.hist-resumen { flex: none; display: flex; gap: 18px; flex-wrap: wrap; padding: 2px 24px 10px; font-size: 12px; color: var(--on-surface-variant); }
+.hist-resumen b { color: var(--on-surface); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+.hist-tabla-wrap { flex: 1; min-height: 0; overflow: auto; margin: 0 16px; border: 1px solid var(--contorno-suave, var(--outline-variant)); border-radius: 14px; background: var(--surface); position: relative; }
+.hist-tabla { width: 100%; border-collapse: collapse; font-size: 12px; font-variant-numeric: tabular-nums; }
+.hist-tabla thead th { position: sticky; top: 0; z-index: 1; text-align: left; padding: 9px 12px; background: var(--surface-low); color: var(--on-surface-variant); font-size: 10.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; border-bottom: 1px solid var(--contorno-suave, var(--outline-variant)); white-space: nowrap; }
+.hist-tabla td { padding: 9px 12px; border-bottom: 1px solid color-mix(in srgb, var(--on-surface) 7%, transparent); white-space: nowrap; vertical-align: middle; }
+.hist-tabla tr.fila { cursor: pointer; transition: background .15s; }
+.hist-tabla tr.fila:hover td { background: color-mix(in srgb, var(--primary) 5%, transparent); }
+.hist-tabla tr.fila.abierta td { background: color-mix(in srgb, var(--primary) 8%, transparent); border-bottom-color: transparent; }
+.hist-tabla .t-serial { font-weight: 600; color: var(--on-surface); }
+.hist-tabla .t-sub { display: block; font-size: 10.5px; color: var(--on-surface-variant); margin-top: 1px; }
+.hist-tabla .t-slot { display: inline-grid; place-items: center; min-width: 30px; height: 22px; padding: 0 6px; border-radius: 6px; background: var(--surface-high); font-weight: 600; font-size: 11px; }
+.h-pill { display: inline-flex; align-items: center; gap: 5px; height: 22px; padding: 0 9px; border-radius: 11px; font-size: 11px; font-weight: 600; }
+.h-pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.h-pill.corriendo { background: var(--primary-container); color: var(--on-primary-container); }
+.h-pill.completado { background: var(--success-container); color: var(--on-success-container); }
+.h-pill.detenido { background: var(--warning-container); color: var(--on-warning-container); }
+.h-av { display: flex; align-items: center; gap: 8px; min-width: 130px; }
+.h-av-bar { flex: 1; height: 5px; border-radius: 3px; background: color-mix(in srgb, var(--on-surface) 10%, transparent); overflow: hidden; }
+.h-av-bar i { display: block; height: 100%; border-radius: 3px; background: var(--primary); }
+.h-av-bar i.ok { background: var(--success); }
+.h-av-bar i.stop { background: #e0a800; }
+.h-av span { font-size: 11px; color: var(--on-surface-variant); min-width: 34px; text-align: right; }
+
+.hist-detalle td { padding: 0 12px 14px !important; background: color-mix(in srgb, var(--primary) 8%, transparent); }
+.hd-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px 18px; padding: 12px 14px; border-radius: 12px; background: var(--surface); border: 1px solid var(--contorno-suave, var(--outline-variant)); white-space: normal; }
+.hd-grid div { min-width: 0; }
+.hd-grid dt { font-size: 10px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--on-surface-variant); }
+.hd-grid dd { margin-top: 2px; font-size: 12px; font-weight: 500; color: var(--on-surface); overflow-wrap: anywhere; }
+.hd-grid .ancho { grid-column: 1 / -1; }
+.hd-grid code { font: 11px var(--mono); }
+
+.hist-vacio { position: absolute; inset: 40px 0 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; color: var(--on-surface-variant); font-size: 12px; text-align: center; }
+.hist-vacio svg { width: 36px; height: 36px; opacity: .6; margin-bottom: 4px; }
+.hist-vacio b { font-size: 14px; color: var(--on-surface); font-weight: 600; }
+.hist-foot { flex: none; display: flex; align-items: center; justify-content: flex-end; gap: 8px; padding: 12px 20px 16px 24px; }
+.hist-ruta { flex: 1; min-width: 0; font: 10.5px var(--mono); color: var(--on-surface-variant); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ===== Notificaciones (ntfy) ===== */
+.icon-btn .punto-ntfy { display: none; position: absolute; bottom: 8px; right: 8px; width: 8px; height: 8px; border-radius: 50%; background: var(--success); box-shadow: 0 0 0 2px var(--bg); }
+.icon-btn.ntfy-on .punto-ntfy { display: block; }
+.modal-content.ntfy { width: 520px; max-height: 92vh; border-radius: 24px; background: var(--surface); }
+.nf-body { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; padding: 6px 24px 4px; }
+.nf-switch { align-self: flex-start; padding-left: 0; }
+.nf-grid { display: grid; grid-template-columns: 1fr 1.4fr; gap: 10px 12px; }
+.campo { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.campo.ancho { grid-column: 1 / -1; }
+.campo span { font-size: 11px; font-weight: 600; letter-spacing: .03em; color: var(--on-surface-variant); }
+.campo em, .nf-eventos em { font-style: normal; font-weight: 400; opacity: .8; }
+.campo input { height: 36px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--contorno-suave, var(--outline-variant)); background: var(--surface); color: var(--on-surface); font: 500 13px var(--font); outline: none; }
+.campo input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 18%, transparent); }
+.nf-eventos { border: 1px solid var(--contorno-suave, var(--outline-variant)); border-radius: 12px; padding: 8px 14px 10px; display: flex; flex-direction: column; gap: 7px; }
+.nf-eventos legend { padding: 0 6px; font-size: 11px; font-weight: 600; letter-spacing: .03em; color: var(--on-surface-variant); }
+.nf-eventos label { display: flex; align-items: center; gap: 9px; font-size: 13px; cursor: pointer; }
+.nf-eventos input { width: 16px; height: 16px; accent-color: var(--primary); cursor: pointer; }
+.nf-preview { display: flex; flex-direction: column; gap: 6px; }
+.nf-prev-lbl { font-size: 11px; font-weight: 600; letter-spacing: .03em; color: var(--on-surface-variant); }
+.nf-card { display: flex; flex-direction: column; gap: 3px; padding: 10px 14px; border-radius: 14px; background: var(--surface-high); border-left: 3px solid var(--success); font-size: 12px; }
+.nf-card b { font-size: 13px; }
+.nf-card span { color: var(--on-surface-variant); line-height: 1.45; }
+.nf-estado { min-height: 18px; font-size: 12px; font-weight: 500; }
+.nf-estado.ok { color: var(--success); }
+.nf-estado.err { color: var(--error); }
+.nf-off .nf-grid, .nf-off .nf-eventos, .nf-off .nf-preview { opacity: .45; pointer-events: none; }
+
+/* ===== Pie ===== */
+.firma { flex: none; text-align: center; padding: 5px 16px 7px; font-size: 11px; color: var(--on-surface-variant); }
+
+@media (max-width: 1060px) { .brand-sub { display: none; } }
+@media (max-width: 900px) { .layout { grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr) 160px 160px; } .bottom-console { grid-column: 1; } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation-duration: 3s !important; } .onda { display: none; } }
+
+/* ===== Contorno fino y elegante ===== */
+:root { --contorno: rgba(0, 0, 0, .78); --contorno-suave: rgba(0, 0, 0, .28); }
+:root[data-theme="dark"] { --contorno: rgba(255, 255, 255, .55); --contorno-suave: rgba(255, 255, 255, .22); }
+
+.card, .bottom-console, .modal-content, .toast { border: 1px solid var(--contorno); }
+.card, .bottom-console { box-shadow: 0 1px 2px rgba(0,0,0,.06); }
+.slot-card { border: 1px solid var(--contorno-suave); }
+.slot-card:hover { border-color: var(--contorno); box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+.slot-config, .term-menu { border: 1px solid var(--contorno); }
+.slot-config-row { border: 1px solid var(--contorno-suave); }
+
+.btn, .btn-outlined, .btn-outlined.peligro { border: 1px solid var(--contorno); }
+.btn-text { border-color: transparent; }
+.chip, .chip[aria-pressed="true"] { border: 1px solid var(--contorno-suave); }
+.chip[aria-pressed="true"] { border-color: var(--contorno); }
+.chips { gap: 6px; }
+.version-chip { border: 1px solid var(--contorno-suave); }
+.icon-btn { border: 1px solid transparent; }
+.icon-btn:hover { border-color: var(--contorno-suave); }
+.sw-track { border-width: 1.5px; }
+.sc-ok { border: 1px solid var(--contorno); }
+  </style>
+</head>
+<body>
+
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-logo"><img src="icons/64x64.png" alt="" onerror="this.remove()"><span>ORT</span></span>
+      <span class="brand-name">ORT Engine</span>
+      <span class="brand-sub">Ghostfish Slot Manager</span>
+    </div>
+    <div class="top-actions">
+      <span class="version-chip" id="version">v—</span>
+      <button id="btn-ntfy" class="icon-btn ripple" type="button" title="Notificaciones al celular" aria-label="Notificaciones al celular" onclick="abrirNtfy()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+        <i class="punto-ntfy"></i>
+      </button>
+      <button id="btn-update" class="icon-btn ripple" type="button" title="Buscar actualizaciones" aria-label="Buscar actualizaciones">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v5h-5"/></svg>
+        <i class="punto"></i>
+      </button>
+      <button id="btn-tema" class="icon-btn ripple" type="button" title="Cambiar tema" aria-label="Cambiar entre modo claro y oscuro">
+        <svg class="ic-luna" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+        <svg class="ic-sol" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <main>
+    <div class="head">
+      <div>
+        <h1>Slots</h1>
+        <p>Lectura de EEPROM y lanzamiento de regresión en 16 posiciones</p>
+      </div>
+      <div class="head-actions">
+        <button class="btn btn-outlined ripple" onclick="abrirHistorial()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/><path d="M12 7v5l3 2"/></svg>
+          Historial
+        </button>
+        <button class="btn btn-tonal ripple" onclick="openGlobalConfigModal()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>
+          Loops
+        </button>
+        <button class="btn btn-outlined peligro ripple" onclick="resetAllSlots()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>
+          Reiniciar
+        </button>
+        <button class="btn btn-filled ripple" onclick="launchAllSlots()">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.14v13.72a1 1 0 0 0 1.52.85l10.6-6.86a1 1 0 0 0 0-1.7L9.52 4.29A1 1 0 0 0 8 5.14z"/></svg>
+          Lanzar todos
+        </button>
+      </div>
+    </div>
+
+    <div class="chips-holder" hidden>
+    <div class="chips" role="group" aria-label="Filtrar slots">
+      <button class="chip f-all ripple" data-filtro="all" aria-pressed="true"><span class="ch-dot"></span>Todos <b id="c-all">16</b></button>
+      <button class="chip f-ok ripple" data-filtro="ok" aria-pressed="false"><span class="ch-dot"></span>Activos <b id="c-ok">0</b></button>
+      <button class="chip f-run ripple" data-filtro="run" aria-pressed="false"><span class="ch-dot"></span>En proceso <b id="c-run">0</b></button>
+      <button class="chip f-err ripple" data-filtro="err" aria-pressed="false"><span class="ch-dot"></span>Error <b id="c-err">0</b></button>
+      <button class="chip f-idle ripple" data-filtro="idle" aria-pressed="false"><span class="ch-dot"></span>Libres <b id="c-idle">16</b></button>
+    </div>
+    </div>
+
+    <div class="layout">
+      <section class="card">
+        <div class="card-head">
+          <span class="card-title">Posiciones</span>
+          <span id="chips-slot"></span>
+        </div>
+        <div class="slots-panel" id="slotsGrid"></div>
+      </section>
+
+      <section class="card">
+        <div class="card-head">
+          <span class="card-title">Actividad</span>
+          <span class="card-meta" id="tl-count">—</span>
+        </div>
+        <div class="telemetry-screen" id="telemetryScreen"></div>
+      </section>
+
+      <section class="bottom-console">
+        <div class="uc-head">
+          <span class="uc-title"><span class="uc-dots"><i></i><i></i><i></i></span>Salida de terminal</span>
+          <button class="uc-btn" onclick="consoleOutput.textContent=''">Limpiar</button>
+        </div>
+        <div class="console-output" id="consoleOutput">Esperando ejecución…</div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="firma">ORT Engine · Ghostfish Slot Manager · <span id="version-pie"></span></footer>
+
+  <!-- Aviso de actualización -->
+  <div id="toast" class="toast" role="status" aria-live="polite">
+    <div class="toast-icono">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 20h16"/></svg>
+    </div>
+    <div class="toast-cuerpo">
+      <strong id="toast-titulo"></strong>
+      <span id="toast-msg"></span>
+      <div class="toast-barra" id="toast-barra"><i id="toast-prog"></i></div>
+      <div class="toast-acciones">
+        <button id="toast-cerrar" type="button">Después</button>
+        <button id="toast-ok" type="button"></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Notificaciones al celular (ntfy) -->
+  <div class="modal-overlay" id="ntfyModal" onclick="if (event.target === this) cerrarNtfy()">
+    <div class="modal-content ntfy" role="dialog" aria-modal="true" aria-labelledby="ntfy-title">
+      <div class="hist-head">
+        <div>
+          <h2 id="ntfy-title">Notificaciones al celular</h2>
+          <p>Se envían a la app <b>ntfy</b> de tu celular.</p>
+        </div>
+        <button class="icon-btn ripple" onclick="cerrarNtfy()" aria-label="Cerrar" title="Cerrar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+
+      <div class="nf-body">
+        <label class="switch nf-switch">
+          <input type="checkbox" id="nf-activo">
+          <span class="sw-track"><span class="sw-thumb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span></span>
+          <span class="sw-lbl">Enviar notificaciones</span>
+        </label>
+
+        <div class="nf-grid">
+          <label class="campo"><span>Tema</span><input id="nf-tema" type="text" placeholder="drdt" autocomplete="off" spellcheck="false"></label>
+          <label class="campo"><span>Servidor</span><input id="nf-servidor" type="text" placeholder="https://ntfy.sh" autocomplete="off" spellcheck="false"></label>
+          <label class="campo ancho"><span>Token de acceso <em>(opcional, solo si tu tema está protegido)</em></span><input id="nf-token" type="password" placeholder="tk_…" autocomplete="off"></label>
+        </div>
+
+        <fieldset class="nf-eventos">
+          <legend>Avisarme cuando…</legend>
+          <label><input type="checkbox" id="nf-entrada"> Entra una unidad <em>(slot, serial, P/N y loops)</em></label>
+          <label><input type="checkbox" id="nf-fin"> Una unidad termina todos sus loops</label>
+          <label><input type="checkbox" id="nf-detenido"> Una unidad se detiene antes de terminar</label>
+        </fieldset>
+
+        <div class="nf-preview">
+          <span class="nf-prev-lbl">Así se verá:</span>
+          <div class="nf-card">
+            <b>Slot 05 · Unidad ingresada</b>
+            <span>FLG3875-50749 · P/N 2681914<br>Loops: 0 a 7 (8 loops · 64 h)<br>Entró: dom 18 oct 09:40 · Termina aprox.: mar 20 oct 17:40</span>
+          </div>
+        </div>
+        <div class="nf-estado" id="nf-estado"></div>
+      </div>
+
+      <div class="hist-foot">
+        <button class="btn btn-outlined ripple" id="nf-probar" onclick="probarNtfy()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+          Enviar prueba
+        </button>
+        <span style="flex:1"></span>
+        <button class="btn btn-text ripple" onclick="cerrarNtfy()">Cancelar</button>
+        <button class="btn btn-filled ripple" onclick="guardarNtfy()">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Historial de unidades -->
+  <div class="modal-overlay" id="historialModal" onclick="if (event.target === this) cerrarHistorial()">
+    <div class="modal-content hist" role="dialog" aria-modal="true" aria-labelledby="hist-title">
+      <div class="hist-head">
+        <div>
+          <h2 id="hist-title">Historial</h2>
+          <p>Cada unidad que entra a un slot: cuándo, con qué datos y cómo terminó.</p>
+        </div>
+        <button class="icon-btn ripple" onclick="cerrarHistorial()" aria-label="Cerrar historial" title="Cerrar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+
+      <div class="hist-bar">
+        <label class="hist-search">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+          <input id="hist-q" type="search" placeholder="Buscar serial, P/N o slot" autocomplete="off">
+        </label>
+        <div class="hist-chips" role="group" aria-label="Filtrar por estado">
+          <button class="chip" data-hest="todos" aria-pressed="true">Todos</button>
+          <button class="chip" data-hest="corriendo" aria-pressed="false"><span class="ch-dot hd-run"></span>Corriendo</button>
+          <button class="chip" data-hest="completado" aria-pressed="false"><span class="ch-dot hd-ok"></span>Completados</button>
+          <button class="chip" data-hest="detenido" aria-pressed="false"><span class="ch-dot hd-stop"></span>Detenidos</button>
+        </div>
+        <select id="hist-periodo" class="hist-select" aria-label="Periodo">
+          <option value="1">Hoy</option>
+          <option value="7" selected>Últimos 7 días</option>
+          <option value="30">Últimos 30 días</option>
+          <option value="0">Todo</option>
+        </select>
+      </div>
+
+      <div class="hist-resumen" id="hist-resumen"></div>
+
+      <div class="hist-tabla-wrap">
+        <table class="hist-tabla">
+          <thead>
+            <tr><th>Entrada</th><th>Slot</th><th>Serial</th><th>P/N</th><th>Loops</th><th>Avance</th><th>Estado</th><th>Salida</th></tr>
+          </thead>
+          <tbody id="hist-body"></tbody>
+        </table>
+        <div class="hist-vacio" id="hist-vacio" hidden>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/><path d="M12 7v5l3 2"/></svg>
+          <b>Sin registros</b>
+          <span id="hist-vacio-msg">Cuando una unidad entre a un slot aparecerá aquí.</span>
+        </div>
+      </div>
+
+      <div class="hist-foot">
+        <span class="hist-ruta" id="hist-ruta"></span>
+        <button class="btn btn-text ripple" onclick="abrirCarpetaHistorial()">Abrir carpeta</button>
+        <button class="btn btn-tonal ripple" onclick="exportarHistorial()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 20h16"/></svg>
+          Exportar a Excel
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Ajuste de loops para los 16 slots -->
+  <div class="modal-overlay" id="globalConfigModal" onclick="if (event.target === this) closeGlobalConfigModal()">
+    <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <div class="modal-header">
+        <h2 id="modal-title">Loops por slot</h2>
+        <p>Último loop de cada posición: se cuenta desde 0, así que 7 = 8 loops. Cada loop dura 8 h. Se guarda automáticamente.</p>
+      </div>
+      <div class="modal-body" id="modalSlotsList"></div>
+      <div class="modal-foot">
+        <button class="btn btn-text ripple" onclick="closeGlobalConfigModal()">Listo</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+
+    const { ipcRenderer } = require('electron');
+    const slotsGrid = document.getElementById('slotsGrid');
+    const modalSlotsList = document.getElementById('modalSlotsList');
+    const telemetryScreen = document.getElementById('telemetryScreen');
+    const consoleOutput = document.getElementById('consoleOutput');
+
+    const activeTimers = {};
+    const slotStates = {};
+    const slotLoops = {};
+
+    var historial = [];             // registros del historial (se cargan del disco)
+    // Contador de loops: cada loop dura 8 h y se cuenta desde 0
+    const HORAS_POR_LOOP = 8;
+    const MS_LOOP = HORAS_POR_LOOP * 3600 * 1000;
+    let corridas = {};                 // slot -> { inicio, loops, serial, pn, avisado }
+    var appLista = false;              // los avisos solo salen cuando la app ya terminó de cargar
+    try { corridas = JSON.parse(localStorage.getItem('ort_corridas') || '{}'); } catch (e) {}
+    const pad = (n) => (n < 10 ? '0' + n : '' + n);
+
+    // Los loops de cada slot se guardan en la PC y se recuerdan al volver a abrir la app
+    let loopsGuardados = {};
+    try { loopsGuardados = JSON.parse(localStorage.getItem('ort_loops') || '{}'); } catch (e) {}
+    function guardarLoops() {
+      try { localStorage.setItem('ort_loops', JSON.stringify(slotLoops)); } catch (e) {}
+    }
+
+    const ICONO_TERMINAL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="4" width="19" height="16" rx="3"/><path d="M7 9.5l3 2.5-3 2.5"/><path d="M12.5 15h4.5"/></svg>';
+    const ICONO_IR = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6"/><path d="M20 4l-9 9"/><path d="M18 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4"/></svg>';
+    const ICONO_CERRAR = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+    const ICONO_AJUSTE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>';
+
+    function logToConsole(text) {
+      if (consoleOutput.textContent === 'Esperando ejecución…') consoleOutput.textContent = '';
+      consoleOutput.textContent += text;
+      consoleOutput.scrollTop = consoleOutput.scrollHeight;
+    }
+
+    /* Registro de actividad: cada evento con hora y color según el tipo */
+    let eventos = 0;
+    function tele(texto, tipo = 'info') {
+      const fila = document.createElement('div');
+      fila.className = 'tl ' + tipo;
+      const t = document.createElement('span');
+      t.className = 'tl-t';
+      t.textContent = new Date().toLocaleTimeString('es-MX', { hour12: false });
+      const m = document.createElement('span');
+      m.innerHTML = texto;
+      fila.append(t, m);
+      telemetryScreen.appendChild(fila);
+      while (telemetryScreen.children.length > 80) telemetryScreen.firstChild.remove();
+      telemetryScreen.scrollTop = telemetryScreen.scrollHeight;
+      document.getElementById('tl-count').textContent = (++eventos) + ' eventos';
+    }
+
+    function escapar(s) {
+      return String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    }
+
+    /* Contadores del encabezado */
+    function actualizarResumen() {
+      let ok = 0, run = 0, err = 0;
+      for (let i = 1; i <= 16; i++) {
+        if (slotStates[i] === 'synced') ok++;
+        else if (slotStates[i] === 'running') run++;
+        else if (slotStates[i] === 'error') err++;
+      }
+      document.getElementById('c-all').textContent = 16;
+      document.getElementById('c-ok').textContent = ok;
+      document.getElementById('c-run').textContent = run;
+      document.getElementById('c-err').textContent = err;
+      document.getElementById('c-idle').textContent = 16 - ok - run - err;
+      aplicarFiltro();
+    }
+
+    /* Filtros: resaltan solo los slots del estado elegido */
+    let filtro = 'all';
+    const ESTADO_FILTRO = { ok: 'synced', run: 'running', err: 'error', idle: 'idle' };
+    function aplicarFiltro() {
+      for (let i = 1; i <= 16; i++) {
+        const card = document.querySelector(`[data-slot="${i}"]`);
+        if (!card) continue;
+        const coincide = filtro === 'all' || slotStates[i] === ESTADO_FILTRO[filtro];
+        card.classList.toggle('dim', !coincide);
+      }
+    }
+    // los filtros van en el encabezado de "Posiciones"
+    document.getElementById('chips-slot').replaceWith(document.querySelector('.chips'));
+    document.querySelector('.chips-holder').remove();
+    document.querySelectorAll('.chip[data-filtro]').forEach((chip) => {
+      chip.addEventListener('click', () => {
+        filtro = chip.dataset.filtro;
+        document.querySelectorAll('.chip[data-filtro]').forEach((c) => c.setAttribute('aria-pressed', c === chip ? 'true' : 'false'));
+        aplicarFiltro();
+      });
+    });
+    setInterval(actualizarResumen, 500);
+
+    function toggleConfigPanel(i, event) {
+      event.stopPropagation();
+      const configEl = document.getElementById(`config-${i}`);
+      configEl.style.display = configEl.style.display === 'none' ? 'flex' : 'none';
+    }
+
+    // 0 loops es un valor válido, por eso se usa isNaN en lugar de "|| 3"
+    function saveSlotConfig(i) {
+      const slider = document.getElementById(`loop-slider-${i}`);
+      const parsed = parseInt(slider.value);
+      const loops = isNaN(parsed) ? 3 : parsed;
+      slotLoops[i] = loops;
+      guardarLoops();
+      pintarLoops(i);
+
+      const modalSlider = document.getElementById(`modal-slider-${i}`);
+      const modalVal = document.getElementById(`modal-val-${i}`);
+      if (modalSlider) modalSlider.value = loops;
+      if (modalVal) modalVal.textContent = loops;
+
+      document.getElementById(`config-${i}`).style.display = 'none';
+      logToConsole(`\n[config] Slot ${i} ajustado a ${loops} loops.`);
+      tele(`Slot ${pad(i)}: ${loops} loops.`, 'info');
+    }
+
+    function openGlobalConfigModal() {
+      document.getElementById('globalConfigModal').style.display = 'flex';
+    }
+
+    function closeGlobalConfigModal() {
+      document.getElementById('globalConfigModal').style.display = 'none';
+    }
+
+    function updateSlotFromModal(i, val) {
+      const parsed = parseInt(val);
+      const num = isNaN(parsed) ? 3 : parsed;
+      slotLoops[i] = num;
+      guardarLoops();
+      pintarLoops(i);
+      document.getElementById(`modal-val-${i}`).textContent = num;
+
+      const cardSlider = document.getElementById(`loop-slider-${i}`);
+      const cardVal = document.getElementById(`loop-val-${i}`);
+      if (cardSlider) cardSlider.value = num;
+      if (cardVal) cardVal.textContent = num;
+    }
+
+
+    // Cambia el estado de la tarjeta conservando la marca de terminal abierta y el filtro
+    function ponerClase(card, clases) {
+      const marcas = ['tiene-terminal', 'dim', 'corriendo', 'terminado'].filter((m) => card.classList.contains(m));
+      card.className = clases;
+      for (const m of marcas) card.classList.add(m);
+    }
+
+    async function processSlot(i) {
+      if (activeTimers[i] || slotStates[i] === 'running') return;
+      if (conTerminal.has(i)) {
+        if (!confirm(`El slot ${i} ya tiene una terminal abierta.\n\n¿Cerrarla y volver a lanzar?`)) return;
+        await ipcRenderer.invoke('terminal:cerrar', i);
+        conTerminal.delete(i);
+        document.querySelector(`[data-slot="${i}"]`).classList.remove('tiene-terminal');
+      }
+      slotStates[i] = 'running';
+
+      const card = document.querySelector(`[data-slot="${i}"]`);
+      const statusEl = document.getElementById(`status-${i}`);
+      const serialEl = document.getElementById(`serial-${i}`);
+      const partEl = document.getElementById(`part-${i}`);
+      const configEl = document.getElementById(`config-${i}`);
+
+      terminarCorrida(i, 'Se volvió a lanzar el slot');
+      ponerClase(card, 'slot-card booting');
+      if (configEl) configEl.style.display = 'none';
+      statusEl.textContent = 'Boot 0 s';
+      partEl.textContent = '';
+      serialEl.textContent = 'Leyendo…';
+
+      let secondsElapsed = 0;
+      const bootTimer = setInterval(() => {
+        secondsElapsed++;
+        statusEl.textContent = `Boot ${secondsElapsed} s`;
+      }, 1000);
+      activeTimers[i] = bootTimer;
+
+      let intento = 0;
+      let data = null;
+      let hasError = true;
+      const entrada = Date.now();          // hora en que se metió / empezó a leerse la unidad
+
+      while (hasError) {
+        if (slotStates[i] !== 'running') {
+          clearInterval(bootTimer);
+          delete activeTimers[i];
+          return;
+        }
+
+        intento++;
+        if (intento > 1) {
+          statusEl.textContent = `Reintento ${intento}`;
+          logToConsole(`\n[slot ${i}] Leyendo… (intento ${intento})`);
+        }
+
+        try {
+          data = await ipcRenderer.invoke('read-eeprom', i, 3, false);
+          hasError = !data || !data.serial || data.serial.includes('ERR') || data.serial.includes('FAIL');
+        } catch (err) {
+          hasError = true;
+        }
+
+        // Si el script no existe, reintentar no sirve de nada: se detiene el slot
+        if (data && data.status === 'NOT FOUND') {
+          clearInterval(bootTimer);
+          delete activeTimers[i];
+          ponerClase(card, 'slot-card error');
+          statusEl.textContent = 'Sin script';
+          serialEl.textContent = 'Error';
+          slotStates[i] = 'error';
+          logToConsole(`\n[slot ${i}] ${data.log}`);
+          tele(`Slot ${pad(i)}: no se encontró <code>read_eeprom_ghostfish.py</code>.`, 'err');
+          return;
+        }
+
+        if (hasError && data && data.status === 'TIMEOUT') {
+          logToConsole(`\n[slot ${i}] El script tardó demasiado, reintentando…`);
+        }
+
+        if (hasError) await new Promise((resolve) => setTimeout(resolve, 1000));
+      }
+
+      clearInterval(bootTimer);
+      delete activeTimers[i];
+
+      if (slotStates[i] !== 'running') return;
+
+      ponerClase(card, 'slot-card active');
+      statusEl.textContent = 'Sync';
+      serialEl.textContent = data.serial;
+      partEl.textContent = data.partNumber;
+      slotStates[i] = 'synced';
+
+      const assignedLoops = slotLoops[i] !== undefined ? slotLoops[i] : 3;
+      logToConsole(`\n[slot ${i}] Serial ${data.serial} · P/N ${data.partNumber} · lanzando con ${assignedLoops} loops…`);
+      tele(`Slot ${pad(i)} sincronizado: <code>${escapar(data.serial)}</code> · ${assignedLoops} loops.`, 'ok');
+
+      launchTerminalProcess(i, data.partNumber, data.serial, assignedLoops);
+      iniciarCorrida(i, assignedLoops, data.serial, data.partNumber, { entrada, intentos: intento, lecturaSeg: Math.round((Date.now() - entrada) / 1000) });
+      setTimeout(revisarTerminales, 1200);
+    }
+
+    for (let i = 1; i <= 16; i++) {
+      slotStates[i] = 'idle';
+      { const g = parseInt(loopsGuardados[i]); slotLoops[i] = (g >= 0 && g <= 7) ? g : 3; }
+
+      const card = document.createElement('div');
+      ponerClase(card, 'slot-card');
+      card.dataset.slot = i;
+      card.tabIndex = 0;
+      card.setAttribute('role', 'button');
+      card.setAttribute('aria-label', `Leer slot ${i}`);
+      card.innerHTML = `
+        <div class="slot-progress"><i></i></div>
+        <div class="slot-top">
+          <span class="slot-number">SLOT ${pad(i)}</span>
+          <span class="slot-tools">
+            <button class="term-btn" onclick="abrirMenuTerminal(${i}, event)" title="Terminal del slot ${i}" aria-label="Terminal del slot ${i}">${ICONO_TERMINAL}</button>
+            <button class="config-toggle-btn" onclick="toggleConfigPanel(${i}, event)" title="Ajustar loops" aria-label="Ajustar loops del slot ${i}">${ICONO_AJUSTE}</button>
+            <span class="slot-led" id="led-${i}"></span>
+          </span>
+        </div>
+        <div class="slot-id">
+          <span class="slot-serial" id="serial-${i}">—</span>
+          <span class="slot-pn" id="part-${i}"></span>
+        </div>
+        <div>
+          <div class="slot-bottom">
+            <span class="slot-loop" id="loop-${i}"></span>
+            <span class="slot-status" id="status-${i}">Libre</span>
+          </div>
+          <div class="loop-bar" id="lbar-${i}"></div>
+        </div>
+
+        <div class="term-menu" id="tmenu-${i}" style="display:none" onclick="event.stopPropagation()">
+          <button class="tm-btn" onclick="irATerminal(${i})">${ICONO_IR}Ir a la terminal</button>
+          <button class="tm-btn peligro" onclick="cerrarTerminal(${i})">${ICONO_CERRAR}Cerrar terminal</button>
+          <button class="tm-btn cancelar" onclick="document.getElementById('tmenu-${i}').style.display='none'">Cancelar</button>
+        </div>
+
+        <div class="slot-config" id="config-${i}" style="display:none" onclick="event.stopPropagation()">
+          <div class="sc-head"><span>Loops · slot ${pad(i)}</span><b id="loop-val-${i}">3</b></div>
+          <input type="range" id="loop-slider-${i}" min="0" max="7" value="3" oninput="document.getElementById('loop-val-${i}').textContent=this.value">
+          <button class="sc-ok" onclick="saveSlotConfig(${i})">Aplicar</button>
+        </div>
+      `;
+
+      card.addEventListener('keydown', (e) => {
+        if ((e.key === 'Enter' || e.key === ' ') && e.target === card) { e.preventDefault(); card.click(); }
+      });
+      card.addEventListener('click', () => {
+        tele(`Slot ${pad(i)}: iniciando lectura.`, 'warn');
+        consoleOutput.textContent = `Iniciando slot ${i}…\n`;
+        processSlot(i);
+      });
+
+      slotsGrid.appendChild(card);
+
+      const modalRow = document.createElement('div');
+      modalRow.className = 'slot-config-row';
+      modalRow.innerHTML = `
+        <span class="scr-n">SLOT ${pad(i)}</span>
+        <input type="range" id="modal-slider-${i}" min="0" max="7" value="3" oninput="updateSlotFromModal(${i}, this.value)">
+        <span class="scr-v" id="modal-val-${i}">3</span>
+      `;
+      modalSlotsList.appendChild(modalRow);
+
+      pintarLoops(i);
+
+      // Mostrar los loops guardados
+      for (const id of [`loop-slider-${i}`, `modal-slider-${i}`]) document.getElementById(id).value = slotLoops[i];
+      for (const id of [`loop-val-${i}`, `modal-val-${i}`]) document.getElementById(id).textContent = slotLoops[i];
+    }
+
+    async function launchTerminalProcess(i, partNumber, serial, loopsCount) {
+      const result = await ipcRenderer.invoke('read-eeprom', i, loopsCount, true, partNumber, serial);
+      logToConsole(`\n${result.log}`);
+    }
+
+    function launchAllSlots() {
+      tele('Lanzamiento de todos los slots (5 s entre cada uno).', 'info');
+      logToConsole(`\n[lote] Inicio escalonado de 16 slots…\n`);
+
+      let delay = 0;
+      for (let i = 1; i <= 16; i++) {
+        if (slotStates[i] === 'idle' || slotStates[i] === 'error') {
+          setTimeout((slotIndex) => {
+            logToConsole(`\n[lote] Lanzando slot ${slotIndex}…`);
+            processSlot(slotIndex);
+          }, delay, i);
+          delay += 5000;
+        }
+      }
+    }
+
+    function resetAllSlots() {
+      const ocupados = Object.values(slotStates).filter((s) => s === 'running' || s === 'synced').length;
+      if (ocupados && !confirm(`Hay ${ocupados} slot(s) en uso. ¿Reiniciar todos los slots?\n\nLas terminales que ya están corriendo no se cierran.`)) return;
+      for (let i = 1; i <= 16; i++) {
+        if (activeTimers[i]) clearInterval(activeTimers[i]);
+        delete activeTimers[i];
+        slotStates[i] = 'idle';
+
+        const card = document.querySelector(`[data-slot="${i}"]`);
+        ponerClase(card, 'slot-card');
+        document.getElementById(`status-${i}`).textContent = 'Libre';
+        document.getElementById(`serial-${i}`).textContent = '—';
+        document.getElementById(`part-${i}`).textContent = '';
+        const configEl = document.getElementById(`config-${i}`);
+        if (configEl) configEl.style.display = 'none';
+        terminarCorrida(i, 'Sistema reiniciado');
+      }
+      tele('Sistema reiniciado. Todos los slots libres.', 'info');
+      consoleOutput.textContent = 'Sistema reiniciado.\n';
+    }
+
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeGlobalConfigModal(); });
+
+    tele('Sistema listo. Haz clic en un slot o usa “Lanzar todos”.', 'info');
+
+    /* ---------- Versión y actualizaciones ---------- */
+    const btnUpd = document.getElementById('btn-update');
+    const toast = document.getElementById('toast');
+    let manual = false;      // el usuario presionó el botón: mostramos "todo al día" y errores
+    let accionOk = null;
+    let timerToast = null;
+
+    function mostrarToast({ titulo, msg = '', tipo = '', ok = null, accion = null, progreso = null, cerrar = true, autoOcultar = 0 }) {
+      clearTimeout(timerToast);
+      toast.className = 'toast visible ' + tipo;
+      document.getElementById('toast-titulo').textContent = titulo;
+      document.getElementById('toast-msg').textContent = msg;
+      const bOk = document.getElementById('toast-ok');
+      bOk.textContent = ok || '';
+      bOk.hidden = !ok;
+      document.getElementById('toast-cerrar').hidden = !cerrar;
+      accionOk = accion;
+      document.getElementById('toast-barra').hidden = progreso === null;
+      if (progreso !== null) document.getElementById('toast-prog').style.width = progreso + '%';
+      if (autoOcultar) timerToast = setTimeout(ocultarToast, autoOcultar);
+    }
+    function ocultarToast() { toast.classList.remove('visible'); }
+    document.getElementById('toast-ok').addEventListener('click', () => { if (accionOk) accionOk(); });
+    document.getElementById('toast-cerrar').addEventListener('click', ocultarToast);
+
+    ipcRenderer.invoke('app:version').then((v) => {
+      document.getElementById('version').textContent = 'v' + v;
+      document.getElementById('version-pie').textContent = 'v' + v;
+    });
+
+    btnUpd.addEventListener('click', () => { manual = true; ipcRenderer.invoke('update:buscar'); });
+
+    ipcRenderer.on('update:estado', (_e, { estado, version, porcentaje, mensaje }) => {
+      btnUpd.classList.toggle('girando', estado === 'buscando' || estado === 'descargando');
+
+      switch (estado) {
+        case 'buscando':
+          if (manual) mostrarToast({ titulo: 'Buscando actualizaciones…', cerrar: false });
+          break;
+
+        case 'disponible':
+          btnUpd.classList.add('hay-nueva');
+          tele(`Nueva versión disponible: <code>v${escapar(version)}</code>.`, 'info');
+          mostrarToast({
+            titulo: `Nueva versión ${version}`,
+            msg: 'Hay una actualización lista para descargar.',
+            ok: 'Descargar',
+            accion: () => {
+              ipcRenderer.invoke('update:descargar');
+              mostrarToast({ titulo: 'Descargando actualización', msg: '0%', progreso: 0, cerrar: false });
+            }
+          });
+          break;
+
+        case 'descargando':
+          mostrarToast({ titulo: 'Descargando actualización', msg: porcentaje + '%', progreso: porcentaje, cerrar: false });
+          break;
+
+        case 'lista':
+          mostrarToast({
+            titulo: `Versión ${version} descargada`,
+            msg: 'Reinicia para instalarla. Te pedirá tu contraseña de Ubuntu. Si no, se instala al cerrar la app.',
+            tipo: 'ok',
+            ok: 'Reiniciar e instalar',
+            accion: () => {
+              const ocupados = Object.values(slotStates).filter((s) => s === 'running').length;
+              if (ocupados && !confirm(`Hay ${ocupados} slot(s) leyendo. ¿Reiniciar de todos modos?`)) return;
+              ipcRenderer.invoke('update:instalar');
+            }
+          });
+          break;
+
+        case 'actual':
+          btnUpd.classList.remove('hay-nueva');
+          if (manual) mostrarToast({ titulo: 'Todo al día', msg: `Ya tienes la última versión (v${version}).`, tipo: 'ok', autoOcultar: 4000 });
+          manual = false;
+          break;
+
+        case 'dev':
+          mostrarToast({ titulo: 'Modo desarrollo', msg: 'Las actualizaciones solo funcionan en la app instalada (.deb).', autoOcultar: 5000 });
+          manual = false;
+          break;
+
+        case 'error':
+          if (manual) mostrarToast({ titulo: 'No se pudo buscar actualizaciones', msg: mensaje || 'Revisa tu conexión a internet.', tipo: 'err', autoOcultar: 7000 });
+          manual = false;
+          break;
+      }
+    });
+  
+    /* ---------- Terminal de cada slot: ir a ella o cerrarla ---------- */
+    let capacidadEnfoque = { ok: false, motivo: 'desconocido' };
+    ipcRenderer.invoke('terminal:capacidad').then((c) => { if (c) capacidadEnfoque = c; }).catch(() => {});
+
+    function abrirMenuTerminal(i, event) {
+      event.stopPropagation();
+      document.getElementById(`config-${i}`).style.display = 'none';
+      const menu = document.getElementById(`tmenu-${i}`);
+      menu.style.display = menu.style.display === 'none' ? 'flex' : 'none';
+    }
+
+    async function irATerminal(i) {
+      document.getElementById(`tmenu-${i}`).style.display = 'none';
+      const r = await ipcRenderer.invoke('terminal:mostrar', i);
+      if (r.ok) return tele(`Slot ${pad(i)}: terminal al frente.`, 'info');
+      const avisos = {
+        'wayland': ['No se puede traer la ventana', 'Ubuntu está usando Wayland, que no permite traer ventanas al frente. Puedes cerrarla desde aquí, o iniciar sesión en "Ubuntu en Xorg".'],
+        'sin-wmctrl': ['Falta un programa', 'Para ir a la terminal instala wmctrl: sudo apt install wmctrl'],
+        'cerrada': ['La terminal ya está cerrada', `La terminal del slot ${i} ya no está abierta.`],
+        'no-encontrada': ['No se encontró la ventana', `No encontré una ventana llamada "SLOT ${pad(i)}".`]
+      };
+      const [titulo, msg] = avisos[r.motivo] || ['No se pudo', 'No se pudo traer la terminal al frente.'];
+      mostrarToast({ titulo, msg, tipo: 'err', autoOcultar: 8000 });
+    }
+
+    async function cerrarTerminal(i) {
+      document.getElementById(`tmenu-${i}`).style.display = 'none';
+      if (!confirm(`¿Cerrar la terminal del slot ${i}?\n\nSe detiene lo que esté corriendo en ella.`)) return;
+      await ipcRenderer.invoke('terminal:cerrar', i);
+      marcarTerminalCerrada(i, 'Cerrada por ti');
+    }
+
+    // Revisa cada 3 s qué terminales siguen abiertas (por si la cierras a mano o termina sola)
+    const conTerminal = new Set();
+    function marcarTerminalCerrada(i, motivo) {
+      conTerminal.delete(i);
+      const card = document.querySelector(`[data-slot="${i}"]`);
+      card.classList.remove('tiene-terminal');
+      document.getElementById(`tmenu-${i}`).style.display = 'none';
+      if (slotStates[i] === 'synced') {
+        slotStates[i] = 'idle';
+        ponerClase(card, 'slot-card');
+        card.classList.remove('tiene-terminal');
+        document.getElementById(`status-${i}`).textContent = 'Cerrada';
+        terminarCorrida(i, motivo === 'Cerrada por ti' ? 'Terminal cerrada desde la app' : 'La ventana de la terminal se cerró');
+        tele(`Slot ${pad(i)}: terminal cerrada (${motivo.toLowerCase()}).`, 'info');
+        logToConsole(`\n[slot ${i}] Terminal cerrada.`);
+      }
+    }
+    async function revisarTerminales() {
+      let vivas = [];
+      try { vivas = await ipcRenderer.invoke('terminal:vivas'); } catch (e) { return; }
+      if (!Array.isArray(vivas)) return;
+      const set = new Set(vivas);
+      for (const i of set) {
+        conTerminal.add(i);
+        document.querySelector(`[data-slot="${i}"]`).classList.add('tiene-terminal');
+      }
+      for (const i of [...conTerminal]) if (!set.has(i)) marcarTerminalCerrada(i, 'Se cerró la ventana');
+    }
+    setInterval(revisarTerminales, 3000);
+
+    /* ---------- Contador de loops (8 h por loop, contando desde 0) ---------- */
+    function guardarCorridas() { try { localStorage.setItem('ort_corridas', JSON.stringify(corridas)); } catch (e) {} }
+
+    function totalLoops(ultimo) { return ultimo + 1; }   // 0..N = N+1 loops
+    function duracion(ms) {
+      const min = Math.max(0, Math.ceil(ms / 60000));
+      const h = Math.floor(min / 60), m = min % 60;
+      return h ? `${h}h ${String(m).padStart(2, '0')}m` : `${m}m`;
+    }
+    function fechaHora(ts) {
+      return new Date(ts).toLocaleString('es-MX', { weekday: 'short', hour: '2-digit', minute: '2-digit', hour12: false });
+    }
+
+    function iniciarCorrida(i, loops, serial, pn, extra = {}) {
+      const inicio = Date.now();
+      const hid = `${inicio}-${i}`;
+      corridas[i] = { inicio, loops, serial, pn, avisado: false, hid };
+      guardarCorridas();
+      pintarLoops(i);
+      const total = totalLoops(loops);
+      guardarRegistro({
+        id: hid, slot: i, serial, pn,
+        loops, totalLoops: total, horasPlan: total * HORAS_POR_LOOP,
+        entrada: extra.entrada || inicio, lanzado: inicio,
+        finEstimado: inicio + total * MS_LOOP,
+        intentos: extra.intentos || 1, lecturaSeg: extra.lecturaSeg || 0,
+        comando: `~/viper-test/opentest/tools/ot_regression.py ${i} ${pn} ${serial} ${loops} 1200`,
+        estado: 'corriendo'
+      });
+      notificar('entrada', {
+        title: `Slot ${pad(i)} · Unidad ingresada`,
+        message: `${serial} · P/N ${pn}\nLoops: 0 a ${loops} (${total} ${total === 1 ? 'loop' : 'loops'} · ${total * HORAS_POR_LOOP} h)\nEntró: ${fechaCorta(extra.entrada || inicio)} · Termina aprox.: ${fechaCorta(inicio + total * MS_LOOP)}`,
+        tags: ['inbox_tray'], priority: 3
+      });
+    }
+    function terminarCorrida(i, motivo) {
+      if (!corridas[i]) return;
+      const c = corridas[i];
+      if (c.hid && !c.cerradoHist) {
+        const transcurrido = Date.now() - c.inicio;
+        const total = totalLoops(c.loops);
+        guardarRegistro({
+          id: c.hid, estado: 'detenido', salida: Date.now(),
+          motivo: motivo || 'Detenido',
+          loopAlcanzado: Math.min(total - 1, Math.floor(transcurrido / MS_LOOP)),
+          horasCorridas: +(transcurrido / 3600000).toFixed(2)
+        });
+        notificar('detenido', {
+          title: `Slot ${pad(i)} · Detenido`,
+          message: `${c.serial} · P/N ${c.pn}\n${motivo || 'Detenido'}\nLlegó al loop ${Math.min(total - 1, Math.floor(transcurrido / MS_LOOP))} de ${c.loops} · ${(transcurrido / 3600000).toFixed(1)} h`,
+          tags: ['warning'], priority: 4
+        });
+      }
+      delete corridas[i];
+      guardarCorridas();
+      document.querySelector(`[data-slot="${i}"]`).classList.remove('terminado');
+      pintarLoops(i);
+    }
+
+    // Dibuja el texto de loops y la barra de segmentos de un slot
+    function pintarLoops(i) {
+      const txt = document.getElementById(`loop-${i}`);
+      const bar = document.getElementById(`lbar-${i}`);
+      const card = document.querySelector(`[data-slot="${i}"]`);
+      if (!txt || !bar) return;
+      const c = corridas[i];
+      const ultimo = c ? c.loops : (slotLoops[i] !== undefined ? slotLoops[i] : 3);
+      const total = totalLoops(ultimo);
+
+      if (bar.children.length !== total) bar.innerHTML = '<i></i>'.repeat(total);
+      const segs = bar.children;
+
+      card.classList.toggle('corriendo', !!c);
+      if (!c) {
+        txt.innerHTML = `${total} ${total === 1 ? 'loop' : 'loops'} · ${total * HORAS_POR_LOOP} h`;
+        txt.title = `Loops 0 a ${ultimo}, ${HORAS_POR_LOOP} h cada uno`;
+        for (const s of segs) { s.className = ''; s.style.removeProperty('--p'); }
+        return;
+      }
+
+      const transcurrido = Date.now() - c.inicio;
+      const fin = c.inicio + total * MS_LOOP;
+      const actual = Math.min(total - 1, Math.floor(transcurrido / MS_LOOP));
+      const dentro = transcurrido - actual * MS_LOOP;
+
+      if (transcurrido >= total * MS_LOOP) {
+        txt.innerHTML = `<b>✓ Completado</b> · ${total * HORAS_POR_LOOP} h`;
+        txt.title = `Terminó ${fechaHora(fin)}`;
+        for (const s of segs) { s.className = 'hecho'; s.style.removeProperty('--p'); }
+        card.classList.add('terminado');
+        if (c.hid && !c.cerradoHist) {
+          c.cerradoHist = true; guardarCorridas();
+          guardarRegistro({ id: c.hid, estado: 'completado', salida: fin, motivo: `Terminó sus ${total} loops`, loopAlcanzado: total - 1, horasCorridas: total * HORAS_POR_LOOP });
+          notificar('fin', {
+            title: `Slot ${pad(i)} · Terminó ✔`,
+            message: `${c.serial} · P/N ${c.pn}\nCompletó ${total} loops (${total * HORAS_POR_LOOP} h)\nTerminó: ${fechaCorta(fin)}`,
+            tags: ['white_check_mark'], priority: 4
+          });
+        }
+        if (!c.avisado && appLista) {
+          c.avisado = true; guardarCorridas();
+          tele(`Slot ${pad(i)}: terminó sus ${total} loops (${total * HORAS_POR_LOOP} h).`, 'ok');
+          mostrarToast({ titulo: `Slot ${pad(i)} terminó`, msg: `${c.serial} completó ${total} loops (${total * HORAS_POR_LOOP} h).`, tipo: 'ok', autoOcultar: 15000 });
+          try { new Notification('ORT Engine', { body: `Slot ${pad(i)} terminó sus ${total} loops.` }); } catch (e) {}
+        }
+        return;
+      }
+
+      card.classList.remove('terminado');
+      txt.innerHTML = `Loop <b>${actual}/${ultimo}</b> · ${duracion(MS_LOOP - dentro)}`;
+      txt.title = `Loop ${actual} de 0–${ultimo} · quedan ${duracion(MS_LOOP - dentro)} de este loop\nTotal restante: ${duracion(fin - Date.now())} · termina ${fechaHora(fin)}`;
+      Array.from(segs).forEach((s, k) => {
+        if (k < actual) { s.className = 'hecho'; s.style.removeProperty('--p'); }
+        else if (k === actual) { s.className = 'actual'; s.style.setProperty('--p', (dentro / MS_LOOP * 100).toFixed(2) + '%'); }
+        else { s.className = ''; s.style.removeProperty('--p'); }
+      });
+    }
+    setInterval(() => { for (const k of Object.keys(corridas)) pintarLoops(+k); }, 1000);
+
+    // Al abrir la app: recuperar los slots que siguen corriendo (su terminal sigue abierta)
+    (async () => {
+      let vivas = [];
+      try { vivas = await ipcRenderer.invoke('terminal:vivas'); } catch (e) {}
+      const set = new Set(Array.isArray(vivas) ? vivas : []);
+      for (const k of Object.keys(corridas)) {
+        const i = +k, c = corridas[k];
+        if (!set.has(i)) {
+          // la terminal se cerró mientras la app estaba cerrada: se registra en el historial
+          if (c.hid && !c.cerradoHist) {
+            const total = totalLoops(c.loops), t = Date.now() - c.inicio;
+            if (t >= total * MS_LOOP) guardarRegistro({ id: c.hid, estado: 'completado', salida: c.inicio + total * MS_LOOP, motivo: `Terminó sus ${total} loops`, loopAlcanzado: total - 1, horasCorridas: total * HORAS_POR_LOOP });
+            else guardarRegistro({ id: c.hid, estado: 'detenido', salida: Date.now(), motivo: 'La terminal se cerró mientras la app estaba cerrada', loopAlcanzado: Math.floor(t / MS_LOOP), horasCorridas: +(t / 3600000).toFixed(2) });
+          }
+          delete corridas[k]; continue;
+        }
+        slotStates[i] = 'synced';
+        const card = document.querySelector(`[data-slot="${i}"]`);
+        ponerClase(card, 'slot-card active');
+        card.classList.add('tiene-terminal');
+        conTerminal.add(i);
+        document.getElementById(`serial-${i}`).textContent = c.serial;
+        document.getElementById(`part-${i}`).textContent = c.pn;
+        document.getElementById(`status-${i}`).textContent = 'Sync';
+        pintarLoops(i);
+        tele(`Slot ${pad(i)} recuperado: <code>${escapar(c.serial)}</code> sigue corriendo.`, 'info');
+      }
+      guardarCorridas();
+      appLista = true;
+      for (let i = 1; i <= 16; i++) pintarLoops(i);
+    })();
+
+    /* ---------- Notificaciones al celular (ntfy) ---------- */
+    function fechaCorta(ts) {
+      const d = new Date(ts);
+      return d.toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short' }).replace(/\./g, '').replace(/ de /g, ' ') + ' ' +
+             d.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: false });
+    }
+    function notificar(tipo, aviso) {
+      ipcRenderer.invoke('ntfy:evento', tipo, aviso).then((r) => {
+        if (r && !r.ok && !r.omitido) tele(`No se pudo enviar la notificación (${escapar(r.mensaje || 'error')}). Se reintentará.`, 'warn');
+      }).catch(() => {});
+    }
+    const camposNtfy = ['activo', 'servidor', 'tema', 'token', 'entrada', 'fin', 'detenido'];
+    function leerFormNtfy() {
+      const n = {};
+      for (const k of camposNtfy) {
+        const el = document.getElementById('nf-' + k);
+        n[k] = el.type === 'checkbox' ? el.checked : el.value.trim();
+      }
+      if (!n.servidor) n.servidor = 'https://ntfy.sh';
+      return n;
+    }
+    function marcarCampana(n) {
+      document.getElementById('btn-ntfy').classList.toggle('ntfy-on', !!(n && n.activo && n.tema));
+      document.getElementById('btn-ntfy').title = n && n.activo ? `Notificaciones al celular: tema "${n.tema}"` : 'Notificaciones al celular (apagadas)';
+    }
+    function estadoNtfy(txt, tipo = '') {
+      const e = document.getElementById('nf-estado');
+      e.textContent = txt; e.className = 'nf-estado ' + tipo;
+    }
+    async function abrirNtfy() {
+      let c = null;
+      try { c = await ipcRenderer.invoke('config:leer'); } catch (e) {}
+      const n = (c && c.ntfy) || { activo: true, servidor: 'https://ntfy.sh', tema: 'drdt', token: '', entrada: true, fin: false, detenido: false };
+      for (const k of camposNtfy) {
+        const el = document.getElementById('nf-' + k);
+        if (el.type === 'checkbox') el.checked = !!n[k]; else el.value = n[k] || '';
+      }
+      document.querySelector('.modal-content.ntfy').classList.toggle('nf-off', !n.activo);
+      estadoNtfy('');
+      document.getElementById('ntfyModal').style.display = 'flex';
+    }
+    function cerrarNtfy() { document.getElementById('ntfyModal').style.display = 'none'; }
+    document.getElementById('nf-activo').addEventListener('change', (e) => {
+      document.querySelector('.modal-content.ntfy').classList.toggle('nf-off', !e.target.checked);
+    });
+    async function guardarNtfy() {
+      const n = leerFormNtfy();
+      if (n.activo && !n.tema) return estadoNtfy('Escribe el tema (por ejemplo: drdt).', 'err');
+      const r = await ipcRenderer.invoke('config:guardar', n);
+      if (r && r.ok) {
+        marcarCampana(n);
+        cerrarNtfy();
+        mostrarToast({ titulo: 'Notificaciones guardadas', msg: n.activo ? `Se enviarán al tema "${n.tema}".` : 'Las notificaciones están apagadas.', tipo: 'ok', autoOcultar: 4000 });
+      } else estadoNtfy('No se pudo guardar la configuración.', 'err');
+    }
+    async function probarNtfy() {
+      const n = leerFormNtfy();
+      if (!n.tema) return estadoNtfy('Escribe el tema (por ejemplo: drdt).', 'err');
+      const b = document.getElementById('nf-probar');
+      b.disabled = true; estadoNtfy('Enviando…');
+      const r = await ipcRenderer.invoke('ntfy:prueba', n);
+      b.disabled = false;
+      if (r && r.ok) estadoNtfy(`✔ Enviada al tema "${n.tema}". Revisa tu celular.`, 'ok');
+      else estadoNtfy(`✖ No se pudo enviar: ${(r && r.mensaje) || 'error desconocido'}.`, 'err');
+    }
+    ipcRenderer.invoke('config:leer').then((c) => marcarCampana(c && c.ntfy)).catch(() => {});
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') cerrarNtfy(); });
+
+    /* ---------- Historial de unidades ---------- */
+    let histEstado = 'todos';
+    let histAbierto = null;
+    let histTimer = null;
+    ipcRenderer.invoke('historial:listar').then((l) => { if (Array.isArray(l)) historial = l; }).catch(() => {});
+
+    function guardarRegistro(reg) {
+      const k = historial.findIndex((r) => r.id === reg.id);
+      if (k >= 0) historial[k] = { ...historial[k], ...reg };
+      else historial.push(reg);
+      ipcRenderer.invoke('historial:guardar', reg).catch(() => {});
+      if (document.getElementById('historialModal').style.display === 'flex') pintarHistorial();
+    }
+
+    const fmtFecha = (ts) => ts ? new Date(ts).toLocaleDateString('es-MX', { weekday: 'short', day: '2-digit', month: 'short' }) : '—';
+    const fmtHora = (ts) => ts ? new Date(ts).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: false }) : '—';
+    const fmtCompleta = (ts) => ts ? new Date(ts).toLocaleString('es-MX', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }) : '—';
+    const fmtISO = (ts) => { if (!ts) return ''; const d = new Date(ts), p = (n) => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`; };
+    const ESTADOS = { corriendo: 'Corriendo', completado: 'Completado', detenido: 'Detenido' };
+
+    function avance(r) {
+      const plan = (r.horasPlan || 0) * 3600000;
+      const hecho = r.estado === 'corriendo' ? Date.now() - r.lanzado : (r.horasCorridas || 0) * 3600000;
+      const pct = plan ? Math.max(0, Math.min(100, hecho / plan * 100)) : 0;
+      return { pct, horas: hecho / 3600000 };
+    }
+
+    function filtrados() {
+      const q = document.getElementById('hist-q').value.trim().toLowerCase();
+      const dias = +document.getElementById('hist-periodo').value;
+      let desde = 0;
+      if (dias === 1) { const d = new Date(); d.setHours(0, 0, 0, 0); desde = d.getTime(); }
+      else if (dias > 1) desde = Date.now() - dias * 86400000;
+      return historial
+        .filter((r) => (r.entrada || 0) >= desde)
+        .filter((r) => histEstado === 'todos' || r.estado === histEstado)
+        .filter((r) => !q || [r.serial, r.pn, 'slot ' + r.slot, pad(r.slot), String(r.slot)].some((v) => String(v || '').toLowerCase().includes(q)))
+        .sort((a, b) => (b.entrada || 0) - (a.entrada || 0));
+    }
+
+    function detalleHTML(r) {
+      const a = avance(r);
+      const campos = [
+        ['Slot', `Slot ${pad(r.slot)}`],
+        ['Serial', r.serial],
+        ['Número de parte', r.pn],
+        ['Estado', ESTADOS[r.estado] || r.estado],
+        ['Entrada (inicio de lectura)', fmtCompleta(r.entrada)],
+        ['Lectura de EEPROM', `${r.lecturaSeg || 0} s · ${r.intentos || 1} ${r.intentos === 1 ? 'intento' : 'intentos'}`],
+        ['Terminal lanzada', fmtCompleta(r.lanzado)],
+        ['Fin estimado', fmtCompleta(r.finEstimado)],
+        ['Salida', r.salida ? fmtCompleta(r.salida) : 'Sigue corriendo'],
+        ['Loops', `0 a ${r.loops} (${r.totalLoops} loops · ${r.horasPlan} h)`],
+        ['Loop alcanzado', r.estado === 'corriendo' ? `${Math.min(r.totalLoops - 1, Math.floor(a.horas / HORAS_POR_LOOP))} (en curso)` : (r.loopAlcanzado !== undefined ? `${r.loopAlcanzado} de ${r.loops}` : '—')],
+        ['Tiempo corrido', `${a.horas.toFixed(1)} h de ${r.horasPlan} h (${Math.round(a.pct)}%)`],
+        ['Motivo de salida', r.motivo || '—'],
+        ['PC / usuario', [r.pc, r.usuario].filter(Boolean).join(' · ') || '—'],
+        ['Versión de la app', r.versionApp ? 'v' + r.versionApp : '—']
+      ];
+      return `<dl class="hd-grid">${campos.map(([k, v]) => `<div><dt>${k}</dt><dd>${escapar(v)}</dd></div>`).join('')}
+        <div class="ancho"><dt>Comando</dt><dd><code>${escapar(r.comando || '—')}</code></dd></div></dl>`;
+    }
+
+    function pintarHistorial() {
+      const lista = filtrados();
+      const body = document.getElementById('hist-body');
+      const todos = historial;
+      const n = (e) => todos.filter((r) => r.estado === e).length;
+      document.getElementById('hist-resumen').innerHTML =
+        `<span>Mostrando <b>${lista.length}</b> de <b>${todos.length}</b></span>` +
+        `<span>Corriendo: <b>${n('corriendo')}</b></span><span>Completados: <b>${n('completado')}</b></span><span>Detenidos: <b>${n('detenido')}</b></span>`;
+
+      body.innerHTML = lista.map((r) => {
+        const a = avance(r);
+        const cls = r.estado === 'completado' ? 'ok' : r.estado === 'detenido' ? 'stop' : '';
+        const fila = `<tr class="fila${histAbierto === r.id ? ' abierta' : ''}" data-id="${escapar(r.id)}">
+          <td>${fmtHora(r.entrada)}<span class="t-sub">${fmtFecha(r.entrada)}</span></td>
+          <td><span class="t-slot">${pad(r.slot)}</span></td>
+          <td class="t-serial">${escapar(r.serial)}</td>
+          <td>${escapar(r.pn)}</td>
+          <td>0–${r.loops}<span class="t-sub">${r.horasPlan} h</span></td>
+          <td><div class="h-av"><div class="h-av-bar"><i class="${cls}" style="width:${a.pct.toFixed(1)}%"></i></div><span>${Math.round(a.pct)}%</span></div></td>
+          <td><span class="h-pill ${r.estado}">${ESTADOS[r.estado] || r.estado}</span></td>
+          <td>${r.salida ? fmtHora(r.salida) + `<span class="t-sub">${fmtFecha(r.salida)}</span>` : `<span class="t-sub">Termina ${fmtHora(r.finEstimado)} · ${fmtFecha(r.finEstimado)}</span>`}</td>
+        </tr>`;
+        return histAbierto === r.id ? fila + `<tr class="hist-detalle"><td colspan="8">${detalleHTML(r)}</td></tr>` : fila;
+      }).join('');
+
+      const vacio = document.getElementById('hist-vacio');
+      vacio.hidden = lista.length > 0;
+      document.getElementById('hist-vacio-msg').textContent = historial.length
+        ? 'Ningún registro coincide con la búsqueda o el periodo.'
+        : 'Cuando una unidad entre a un slot aparecerá aquí.';
+    }
+
+    document.getElementById('hist-body').addEventListener('click', (e) => {
+      const tr = e.target.closest('tr.fila');
+      if (!tr) return;
+      histAbierto = histAbierto === tr.dataset.id ? null : tr.dataset.id;
+      pintarHistorial();
+    });
+    document.getElementById('hist-q').addEventListener('input', pintarHistorial);
+    document.getElementById('hist-periodo').addEventListener('change', pintarHistorial);
+    document.querySelectorAll('[data-hest]').forEach((b) => b.addEventListener('click', () => {
+      histEstado = b.dataset.hest;
+      document.querySelectorAll('[data-hest]').forEach((x) => x.setAttribute('aria-pressed', x === b ? 'true' : 'false'));
+      pintarHistorial();
+    }));
+
+    async function abrirHistorial() {
+      try { const l = await ipcRenderer.invoke('historial:listar'); if (Array.isArray(l)) historial = l; } catch (e) {}
+      document.getElementById('historialModal').style.display = 'flex';
+      pintarHistorial();
+      clearInterval(histTimer);
+      histTimer = setInterval(pintarHistorial, 5000);       // el avance de los que corren se actualiza solo
+      setTimeout(() => document.getElementById('hist-q').focus(), 50);
+    }
+    function cerrarHistorial() {
+      document.getElementById('historialModal').style.display = 'none';
+      clearInterval(histTimer);
+    }
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') cerrarHistorial(); });
+
+    async function exportarHistorial() {
+      const lista = filtrados();
+      if (!lista.length) return mostrarToast({ titulo: 'Nada que exportar', msg: 'No hay registros con los filtros actuales.', tipo: 'err', autoOcultar: 5000 });
+      const cols = [
+        ['Entrada', (r) => fmtISO(r.entrada)], ['Slot', (r) => r.slot], ['Serial', (r) => r.serial], ['Numero de parte', (r) => r.pn],
+        ['Estado', (r) => ESTADOS[r.estado] || r.estado], ['Loops (0 a N)', (r) => r.loops], ['Total loops', (r) => r.totalLoops],
+        ['Horas plan', (r) => r.horasPlan], ['Horas corridas', (r) => avance(r).horas.toFixed(2)], ['Avance %', (r) => Math.round(avance(r).pct)],
+        ['Loop alcanzado', (r) => r.loopAlcanzado ?? ''], ['Terminal lanzada', (r) => fmtISO(r.lanzado)], ['Fin estimado', (r) => fmtISO(r.finEstimado)],
+        ['Salida', (r) => fmtISO(r.salida)], ['Motivo', (r) => r.motivo || ''], ['Lectura (s)', (r) => r.lecturaSeg ?? ''], ['Intentos de lectura', (r) => r.intentos ?? ''],
+        ['PC', (r) => r.pc || ''], ['Usuario', (r) => r.usuario || ''], ['Version app', (r) => r.versionApp || ''], ['Comando', (r) => r.comando || '']
+      ];
+      const celda = (v) => { const s = String(v ?? ''); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+      const csv = [cols.map((c) => c[0]).join(','), ...lista.map((r) => cols.map((c) => celda(c[1](r))).join(','))].join('\r\n');
+      const hoy = fmtISO(Date.now()).slice(0, 10);
+      const res = await ipcRenderer.invoke('historial:exportar', csv, `historial-DRDT-${hoy}.csv`);
+      if (res && res.ok) mostrarToast({ titulo: 'Historial exportado', msg: res.ruta, tipo: 'ok', autoOcultar: 7000 });
+      else if (res && !res.cancelado) mostrarToast({ titulo: 'No se pudo exportar', msg: res.mensaje || '', tipo: 'err', autoOcultar: 7000 });
+    }
+
+    async function abrirCarpetaHistorial() {
+      const r = await ipcRenderer.invoke('historial:carpeta');
+      if (r && r.ruta) document.getElementById('hist-ruta').textContent = r.ruta;
+    }
+
+    /* ---------- Efecto de onda al hacer clic (estilo Material) ---------- */
+    document.addEventListener('pointerdown', (e) => {
+      const el = e.target.closest('.ripple');
+      if (!el || el.disabled) return;
+      const rect = el.getBoundingClientRect();
+      const d = Math.max(rect.width, rect.height) * 2;
+      const onda = document.createElement('span');
+      onda.className = 'onda';
+      onda.style.width = onda.style.height = d + 'px';
+      onda.style.left = (e.clientX - rect.left - d / 2) + 'px';
+      onda.style.top = (e.clientY - rect.top - d / 2) + 'px';
+      el.appendChild(onda);
+      onda.addEventListener('animationend', () => onda.remove());
+    });
+
+    /* ---------- Modo claro / oscuro ---------- */
+    const btnTema = document.getElementById('btn-tema');
+    function ponerTema(oscuro) {
+      document.documentElement.dataset.theme = oscuro ? 'dark' : 'light';
+      btnTema.title = oscuro ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro';
+      try { localStorage.setItem('ort_tema', oscuro ? 'dark' : 'light'); } catch (e) {}
+    }
+    let temaGuardado = null;
+    try { temaGuardado = localStorage.getItem('ort_tema'); } catch (e) {}
+    ponerTema(temaGuardado ? temaGuardado === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches);
+    btnTema.addEventListener('click', () => ponerTema(document.documentElement.dataset.theme !== 'dark'));
+
+  </script>
+</body>
+</html>
