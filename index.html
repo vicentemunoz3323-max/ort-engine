@@ -379,6 +379,22 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
 .hist-foot { flex: none; display: flex; align-items: center; justify-content: flex-end; gap: 8px; padding: 12px 20px 16px 24px; }
 .hist-ruta { flex: 1; min-width: 0; font: 10.5px var(--mono); color: var(--on-surface-variant); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
+/* ===== Contraseña para reiniciar ===== */
+.modal-content.pin { width: 380px; padding: 24px 24px 18px; border-radius: 24px; background: var(--surface); align-items: stretch; gap: 0; }
+.pin-icono { width: 44px; height: 44px; margin: 0 auto 12px; display: grid; place-items: center; border-radius: 50%; background: var(--error-container); color: var(--error); }
+.pin-icono svg { width: 22px; height: 22px; }
+.modal-content.pin h2 { text-align: center; font-size: 18px; font-weight: 600; letter-spacing: -.01em; }
+.modal-content.pin p { text-align: center; margin: 6px 0 16px; font-size: 12.5px; line-height: 1.5; color: var(--on-surface-variant); }
+.modal-content.pin p b { color: var(--on-surface); font-weight: 600; }
+.modal-content.pin .campo input { height: 40px; font-size: 15px; letter-spacing: .1em; }
+.pin-error { min-height: 20px; padding-top: 6px; font-size: 12px; font-weight: 600; color: var(--error); }
+.pin-acciones { display: flex; justify-content: flex-end; gap: 8px; margin-top: 6px; }
+.btn-peligro-lleno { background: var(--error); color: #fff; }
+:root[data-theme="dark"] .btn-peligro-lleno { color: #410e0b; }
+.btn-peligro-lleno:hover { box-shadow: 0 2px 8px color-mix(in srgb, var(--error) 35%, transparent); }
+.sacudir { animation: sacudir .4s; }
+@keyframes sacudir { 0%, 100% { transform: translateX(0); } 20% { transform: translateX(-8px); } 40% { transform: translateX(8px); } 60% { transform: translateX(-5px); } 80% { transform: translateX(5px); } }
+
 /* ===== Notificaciones (ntfy) ===== */
 .icon-btn .punto-ntfy { display: none; position: absolute; bottom: 8px; right: 8px; width: 8px; height: 8px; border-radius: 50%; background: var(--success); box-shadow: 0 0 0 2px var(--bg); }
 .icon-btn.ntfy-on .punto-ntfy { display: block; }
@@ -538,6 +554,26 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
       <div class="toast-acciones">
         <button id="toast-cerrar" type="button">Después</button>
         <button id="toast-ok" type="button"></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Contraseña para reiniciar -->
+  <div class="modal-overlay" id="pinModal" onclick="if (event.target === this) cerrarPin()">
+    <div class="modal-content pin" role="dialog" aria-modal="true" aria-labelledby="pin-title">
+      <div class="pin-icono">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2.5"/><path d="M8 11V7.5a4 4 0 0 1 8 0V11"/></svg>
+      </div>
+      <h2 id="pin-title">Reiniciar todos los slots</h2>
+      <p id="pin-msg"></p>
+      <label class="campo">
+        <span>Contraseña</span>
+        <input id="pin-input" type="password" autocomplete="off" placeholder="••••••••">
+      </label>
+      <div class="pin-error" id="pin-error" role="alert"></div>
+      <div class="pin-acciones">
+        <button class="btn btn-text ripple" onclick="cerrarPin()">Cancelar</button>
+        <button class="btn btn-peligro-lleno ripple" onclick="confirmarPin()">Reiniciar</button>
       </div>
     </div>
   </div>
@@ -1012,9 +1048,44 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
       }
     }
 
+    /* ---------- Contraseña para reiniciar ---------- */
+    // Se guarda solo la huella (SHA-256) de la contraseña, no el texto
+    const HUELLA_REINICIO = '897beebc7584bf632c25e81634cd70554e5a9164a56af6e6efe19046869d8355';
+    async function huella(txt) {
+      const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(txt));
+      return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('');
+    }
     function resetAllSlots() {
       const ocupados = Object.values(slotStates).filter((s) => s === 'running' || s === 'synced').length;
-      if (ocupados && !confirm(`Hay ${ocupados} slot(s) en uso. ¿Reiniciar todos los slots?\n\nLas terminales que ya están corriendo no se cierran.`)) return;
+      document.getElementById('pin-msg').innerHTML = ocupados
+        ? `Hay <b>${ocupados} slot(s) en uso</b>. Se borrará su estado en la app; las terminales que ya están corriendo <b>no se cierran</b>.`
+        : 'Todos los slots volverán a quedar libres.';
+      const inp = document.getElementById('pin-input');
+      inp.value = '';
+      document.getElementById('pin-error').textContent = '';
+      document.getElementById('pinModal').style.display = 'flex';
+      setTimeout(() => inp.focus(), 50);
+    }
+    function cerrarPin() { document.getElementById('pinModal').style.display = 'none'; }
+    async function confirmarPin() {
+      const inp = document.getElementById('pin-input');
+      if (await huella(inp.value) === HUELLA_REINICIO) {
+        cerrarPin();
+        ejecutarReinicio();
+      } else {
+        document.getElementById('pin-error').textContent = 'Contraseña incorrecta';
+        const caja = document.querySelector('.modal-content.pin');
+        caja.classList.remove('sacudir'); void caja.offsetWidth; caja.classList.add('sacudir');
+        inp.select();
+        tele('Intento de reinicio con contraseña incorrecta.', 'warn');
+      }
+    }
+    document.getElementById('pin-input').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') confirmarPin();
+      if (e.key === 'Escape') cerrarPin();
+    });
+
+    function ejecutarReinicio() {
       for (let i = 1; i <= 16; i++) {
         if (activeTimers[i]) clearInterval(activeTimers[i]);
         delete activeTimers[i];

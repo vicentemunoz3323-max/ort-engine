@@ -1,8 +1,9 @@
 {
   "name": "ort-engine",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "ORT Engine - Ghostfish Slot Manager",
   "main": "main.js",
+  "desktopName": "ort-engine.desktop",
   "homepage": "https://github.com/vicentemunoz3323-max/ort-engine",
   "repository": {
     "type": "git",
@@ -39,7 +40,8 @@
       ],
       "category": "Utility",
       "maintainer": "Vicente Muñoz <vicentemunoz3323@gmail.com>",
-      "icon": "icons"
+      "icon": "icons",
+      "syncDesktopName": true
     },
     "publish": [
       {
