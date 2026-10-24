@@ -305,6 +305,7 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
 .modal-foot { flex: none; display: flex; justify-content: flex-end; gap: 8px; padding: 16px 24px 20px; }
 
 /* ===== Aviso inferior (snackbar) ===== */
+#toast-msg { white-space: pre-line; }
 .toast { position: fixed; left: 16px; bottom: 16px; z-index: 200; width: 380px; max-width: calc(100vw - 32px); display: flex; gap: 14px; padding: 14px 16px; border-radius: 12px; background: #313033; color: #f4eff4; box-shadow: var(--shadow-3); opacity: 0; transform: translateY(16px); pointer-events: none; transition: opacity .25s, transform .25s cubic-bezier(.2,0,0,1); }
 :root[data-theme="dark"] .toast { background: #e6e1e5; color: #313033; }
 .toast.visible { opacity: 1; transform: none; pointer-events: auto; }
@@ -1917,6 +1918,18 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
       }
     });
   
+    // Al abrir la app después de actualizarla
+    ipcRenderer.on('update:instalada', (_e, { de, a, novedades }) => {
+      const lista = Array.isArray(novedades) ? novedades : [];
+      tele(`App actualizada de <code>v${escapar(de)}</code> a <code>v${escapar(a)}</code>.` + (lista.length ? ' ' + lista.map(escapar).join(' · ') : ''), 'ok');
+      setTimeout(() => mostrarToast({
+        titulo: `Se actualizó a v${a}`,
+        msg: lista.length ? lista.map((n) => '• ' + n).join('\n') : `Antes tenías la v${de}.`,
+        tipo: 'ok',
+        autoOcultar: 15000
+      }), 1500);
+    });
+
     /* ---------- Terminal de cada slot: ir a ella o cerrarla ---------- */
     let capacidadEnfoque = { ok: false, motivo: 'desconocido' };
     ipcRenderer.invoke('terminal:capacidad').then((c) => { if (c) capacidadEnfoque = c; }).catch(() => {});
@@ -2150,6 +2163,7 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
     function monitorDeCorrida(i) {
       const m = monitor[i], c = corridas[i];
       if (!m || !c) return false;
+      if (c.sinMonitor) return false;      // consola recuperada que no abrió la app: su salida no se guarda
       const desde = m.ejecuciones && m.ejecuciones.length ? m.ejecuciones[0].ts : (m.error ? m.error.ts : m.cambio || 0);
       return desde >= c.inicio - 120000;
     }
@@ -2268,8 +2282,77 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
       card.title = `${f.serial || ''} · ${f.status || 'Cerrada'} (${new Date(f.ts).toLocaleString('es-MX', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false })})`;
     }
 
+    /* ---------- Consolas que ya estaban corriendo ----------
+       main.js busca las consolas "SLOT NN" que tienen ot_regression.py trabajando y de su
+       comando saca serial, P/N y loops. Si la app no conocía esa corrida (la abrió una versión
+       anterior, se perdió lo guardado o se abrió a mano), la tarjeta la toma tal cual.
+       El loop sale de la salida de la terminal cuando la abrió la app; si no, se calcula
+       por el tiempo que lleva corriendo (8 h por loop). */
+    function loopAprox(i) {
+      const c = corridas[i];
+      if (!c) return 0;
+      const total = totalLoops(c.loops);
+      const m = monitorDeCorrida(i) ? monitor[i] : null;
+      if (m && m.loop !== null) return Math.min(total - 1, m.loop);
+      return Math.min(total - 1, Math.max(0, Math.floor((Date.now() - c.inicio) / MS_LOOP)));
+    }
+    function adoptarConsola(d, inicial) {
+      const i = d.slot;
+      if (!i || i < 1 || i > 16) return false;
+      if (slotStates[i] === 'running') return false;             // la app lo está leyendo en este momento
+      const previa = corridas[i];
+      if (previa && previa.serial === d.serial) return false;    // ya la conocemos
+      if (previa) terminarCorrida(i, `En la consola ahora corre otra unidad (${d.serial})`);
+
+      const hid = `${d.inicio}-${i}`;
+      corridas[i] = { inicio: d.inicio, loops: d.loops, serial: d.serial, pn: d.pn, avisado: false, hid, recuperada: true, sinMonitor: !d.deLaApp };
+      guardarCorridas();
+      borrarFicha(i);
+      slotStates[i] = 'synced';
+      const card = document.querySelector(`[data-slot="${i}"]`);
+      ponerClase(card, 'slot-card active');
+      card.classList.add('tiene-terminal');
+      card.title = '';
+      conTerminal.add(i);
+      document.getElementById(`serial-${i}`).textContent = d.serial;
+      document.getElementById(`part-${i}`).textContent = d.pn;
+      document.getElementById(`status-${i}`).textContent = 'Sync';
+      pintarLoops(i);
+
+      const total = totalLoops(d.loops);
+      const n = loopAprox(i);
+      guardarRegistro({
+        id: hid, slot: i, serial: d.serial, pn: d.pn,
+        loops: d.loops, totalLoops: total, horasPlan: total * HORAS_POR_LOOP,
+        entrada: d.inicio, lanzado: d.inicio, finEstimado: d.inicio + total * MS_LOOP,
+        comando: `~/viper-test/opentest/tools/ot_regression.py ${i} ${d.pn} ${d.serial} ${d.loops} 1200`,
+        estado: 'corriendo', recuperada: true,
+        motivo: 'Recuperada de una consola que ya estaba corriendo'
+      });
+      tele(`Slot ${pad(i)}: consola detectada · <code>${escapar(d.serial)}</code> · P/N <code>${escapar(d.pn)}</code> · loop ${d.deLaApp ? '' : 'aprox. '}<b>${n}/${d.loops}</b>` +
+        ` · corriendo desde ${fechaHora(d.inicio)}.`, 'info');
+      logToConsole(`\n[slot ${i}] Consola recuperada: ${d.serial} · P/N ${d.pn} · loops 0-${d.loops} · loop ${d.deLaApp ? '' : 'aprox. '}${n}`);
+      return true;
+    }
+    async function detectarConsolas(inicial) {
+      let lista = [];
+      try { lista = await ipcRenderer.invoke('terminal:detectar'); } catch (e) { return 0; }
+      if (!Array.isArray(lista)) return 0;
+      let nuevas = 0;
+      for (const d of lista) if (adoptarConsola(d, inicial)) nuevas++;
+      if (nuevas && !inicial) {
+        mostrarToast({ titulo: nuevas === 1 ? 'Se detectó una consola corriendo' : `Se detectaron ${nuevas} consolas corriendo`,
+          msg: 'Se recuperó su serial, P/N y loops. Revisa la actividad para ver el detalle.', tipo: 'ok', autoOcultar: 8000 });
+      }
+      return nuevas;
+    }
+
     // Al abrir la app: recuperar los slots que siguen corriendo (su terminal sigue abierta)
     (async () => {
+      let detectadas = [];
+      // primero se buscan las consolas que están corriendo (así también cuentan como "vivas")
+      try { detectadas = await ipcRenderer.invoke('terminal:detectar'); } catch (e) {}
+      if (!Array.isArray(detectadas)) detectadas = [];
       let vivas = [];
       try { vivas = await ipcRenderer.invoke('terminal:vivas'); } catch (e) {}
       try { const todos = await ipcRenderer.invoke('slot:monitor-todos'); if (todos) for (const [k, m] of Object.entries(todos)) monitor[+k] = m; } catch (e) {}
@@ -2299,10 +2382,14 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
         tele(`Slot ${pad(i)} recuperado: <code>${escapar(c.serial)}</code> sigue corriendo.`, 'info');
       }
       guardarCorridas();
+      // consolas corriendo que la app no tenía registradas (o con otra unidad)
+      for (const d of detectadas) adoptarConsola(d, true);
       appLista = true;
       for (let i = 1; i <= 16; i++) pintarLoops(i);
       for (let i = 1; i <= 16; i++) if (!corridas[i] && fichas[i]) pintarFicha(i);
       for (const k of Object.keys(monitor)) if (corridas[k]) recibirMonitor(+k, monitor[k], true);
+      // y se sigue revisando cada 15 s por si abres una consola a mano con la app abierta
+      setInterval(() => detectarConsolas(false), 15000);
     })();
 
     /* ---------- Notificaciones al celular (ntfy) ---------- */

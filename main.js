@@ -49,6 +49,7 @@ function createWindow() {
 
   // Revisión automática de actualizaciones al abrir (solo en la app instalada)
   mainWindow.webContents.once('did-finish-load', () => {
+    avisarSiSeActualizo();
     if (app.isPackaged) setTimeout(buscarActualizaciones, 3000);
   });
 }
@@ -77,7 +78,12 @@ if (autoUpdater) {
     }
   });
   autoUpdater.on('download-progress', (p) => enviarEstado('descargando', { porcentaje: Math.round(p.percent) }));
-  autoUpdater.on('update-downloaded', (info) => enviarEstado('lista', { version: info.version }));
+  autoUpdater.on('update-downloaded', (info) => {
+    enviarEstado('lista', { version: info.version });
+    if (Notification.isSupported()) {
+      new Notification({ title: 'ORT Engine', body: `La versión ${info.version} ya se descargó. Reinicia la app para instalarla.` }).show();
+    }
+  });
   autoUpdater.on('error', (e) => enviarEstado('error', { mensaje: e ? e.message : 'Error desconocido' }));
 }
 
@@ -86,6 +92,31 @@ async function buscarActualizaciones() {
   if (!app.isPackaged) return enviarEstado('dev');   // con "npm start" no hay nada que actualizar
   try { await autoUpdater.checkForUpdates(); }
   catch (e) { enviarEstado('error', { mensaje: e.message }); }
+}
+
+/* ---------- Aviso de "ya se actualizó" ----------
+   Al abrir la app se compara la versión actual con la última que se abrió en esta PC.
+   Si cambió, sale una notificación del sistema y un aviso dentro de la app con las novedades. */
+const NOVEDADES = {
+  '1.2.9': [
+    'Detecta las consolas de slots que ya están corriendo y recupera serial, P/N y loops',
+    'Calcula en qué loop va cada consola recuperada',
+    'Notificación al terminar de descargar y al instalar una actualización'
+  ]
+};
+
+function avisarSiSeActualizo() {
+  const actual = app.getVersion();
+  const c = leerConfig();
+  // Las versiones anteriores no guardaban este dato: si ya se usó la app (asistente visto), cuenta como actualización
+  const anterior = c.ultimaVersion || (c.bienvenida && c.bienvenida.version) || null;
+  if (c.ultimaVersion !== actual) { c.ultimaVersion = actual; guardarConfig(c); }
+  if (!anterior || anterior === actual) return;
+  const novedades = NOVEDADES[actual] || [];
+  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('update:instalada', { de: anterior, a: actual, novedades });
+  if (Notification.isSupported()) {
+    new Notification({ title: `ORT Engine se actualizó a v${actual}`, body: novedades.length ? novedades.map((n) => '• ' + n).join('\n') : `Antes tenías la v${anterior}.` }).show();
+  }
 }
 
 ipcMain.handle('app:version', () => app.getVersion());
@@ -168,6 +199,7 @@ try {
 } catch (e) {}
 
 const pidFile = (clave) => path.join(DIR_TMP, `${clave}.pid`);
+const marcaAdoptada = (clave) => path.join(DIR_TMP, `${clave}.adoptada`);
 
 /* ---------- Vigilar la salida de cada slot (loops reales y errores) ---------- */
 const monitorSlots = require('./monitor_slots.js');
@@ -183,6 +215,7 @@ const comillas = (s) => `'${String(s).replace(/'/g, `'\\''`)}'`;
 function abrirTerminal(clave, titulo, comando, slotMonitor) {
   const homeDir = app.getPath('home');
   try { fs.unlinkSync(pidFile(clave)); } catch (e) {}
+  try { fs.unlinkSync(marcaAdoptada(clave)); } catch (e) {}
   let ejecutar = comando;
   if (slotMonitor) {
     monitorSlots.prepararCorrida(slotMonitor);
@@ -266,6 +299,76 @@ ipcMain.handle('terminal:cerrar', (_e, slot) => {
       resolve({ ok: true });
     });
   });
+});
+
+/* ---------- Detectar consolas que ya están corriendo ----------
+   Sirve cuando abres la app y ya hay consolas de slots trabajando: las abrió una versión
+   anterior, se perdió lo guardado o las abriste a mano.
+   - La consola se llama "SLOT 01", "SLOT 02"… y dentro corre
+       ot_regression.py <slot> <P/N> <serial> <loops> 1200
+     De esa línea se saca el slot, el P/N, el serial y los loops.
+   - De cuánto tiempo lleva corriendo el proceso sale la hora de inicio (y con eso el loop aprox.).
+   - Si la consola no tiene archivo de proceso (.pid), se le crea, para que "Ir a la terminal",
+     "Cerrar terminal" y el aviso de "se cerró la ventana" funcionen igual que con las demás. */
+const RX_REGRESION = /ot_regression\.py\s+(\d{1,2})\s+(\S+)\s+(\S+)\s+(\d+)/;
+
+function listarProcesos() {
+  return new Promise((resolve) => {
+    exec('ps -eo pid=,sid=,etimes=,args=', { maxBuffer: 16 * 1024 * 1024, timeout: 5000 },
+      (err, out) => resolve(err ? '' : String(out)));
+  });
+}
+
+// Slots con ventana "SLOT NN" abierta (solo si hay wmctrl y la sesión es X11; si no, null)
+function ventanasDeSlots() {
+  return new Promise((resolve) => {
+    exec('wmctrl -l', { timeout: 3000 }, (err, out) => {
+      if (err) return resolve(null);
+      const slots = new Set();
+      for (const l of String(out).split('\n')) {
+        const m = l.match(/\bSLOT\s+(\d{1,2})\s*$/i);
+        if (m) slots.add(parseInt(m[1], 10));
+      }
+      resolve(slots);
+    });
+  });
+}
+
+ipcMain.handle('terminal:detectar', async () => {
+  const [ps, ventanas] = await Promise.all([listarProcesos(), ventanasDeSlots()]);
+  const ahora = Date.now();
+  const porSlot = {};
+  for (const linea of ps.split('\n')) {
+    const m = linea.trim().match(/^(\d+)\s+(\d+)\s+(\d+)\s+(.*)$/);
+    if (!m) continue;
+    const pid = parseInt(m[1], 10), sid = parseInt(m[2], 10), seg = parseInt(m[3], 10);
+    const r = m[4].match(RX_REGRESION);
+    if (!r) continue;
+    const slot = parseInt(r[1], 10);
+    if (slot < 1 || slot > 16) continue;
+    const p = { slot, pn: r[2], serial: r[3], loops: parseInt(r[4], 10), inicio: ahora - seg * 1000, pid, sid };
+    // Por cada slot hay varios procesos (bash, script, python); el más antiguo es el de la
+    // consola, y su "sesión" es la que hay que cerrar para cerrar la ventana.
+    const q = porSlot[slot];
+    if (!q || p.inicio < q.inicio || (p.inicio === q.inicio && p.pid < q.pid)) porSlot[slot] = p;
+  }
+
+  const lista = [];
+  for (const p of Object.values(porSlot)) {
+    const clave = claveSlot(p.slot);
+    const pidGuardado = leerPid(clave);
+    // ¿La abrió esta app? Entonces su salida se está guardando y se conocen los loops reales.
+    // (una consola que solo se recuperó queda marcada con el archivo .adoptada)
+    const deLaApp = !!pidGuardado && !fs.existsSync(marcaAdoptada(clave));
+    if (!pidGuardado) {
+      try { fs.writeFileSync(pidFile(clave), String(p.sid)); fs.writeFileSync(marcaAdoptada(clave), ''); } catch (e) {}
+    }
+    lista.push({
+      slot: p.slot, serial: p.serial, pn: p.pn, loops: p.loops, inicio: p.inicio, deLaApp,
+      ventana: ventanas ? ventanas.has(p.slot) : null
+    });
+  }
+  return lista.sort((a, b) => a.slot - b.slot);
 });
 
 ipcMain.handle('read-eeprom', async (event, slotNum, loopsNum = 7, launchTerminal = false, detectedPartNumber = null, detectedSerial = null) => {

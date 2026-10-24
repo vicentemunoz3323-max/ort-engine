@@ -1,4 +1,4 @@
-# ORT Engine · Ghostfish Slot Manager (v1.1.0)
+# ORT Engine · Ghostfish Slot Manager (v1.2.9)
 
 Administra 16 slots: lee la EEPROM de cada unidad con `read_eeprom_ghostfish.py`
 y, al obtener serial y número de parte, abre una terminal que ejecuta
@@ -52,7 +52,7 @@ npm run build:deb
 El instalador queda en la carpeta `dist/`. Instálalo con:
 
 ```
-sudo apt install ./dist/ort-engine_1.1.0_amd64.deb
+sudo apt install ./dist/ort-engine_1.2.9_amd64.deb
 ```
 
 ## Versiones y actualizaciones
