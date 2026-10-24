@@ -62,9 +62,15 @@ function envolver(s, comando, comillas) {
   return `if command -v script >/dev/null 2>&1; then script -q -f -e -c ${comillas(interno)} ${log}; else ${comando}; fi; echo $? > ${exit}`;
 }
 
+// Códigos de salida de bash con un significado claro
+const MOTIVO_CODIGO = {
+  127: 'No se encontró ot_regression.py en esta PC (debe estar en ~/viper-test/opentest/tools/)',
+  126: 'ot_regression.py no tiene permiso de ejecución (chmod +x)'
+};
 function clasificar(linea) {
   const t = linea.trim();
   if (!t) return null;
+  if (/ot_regression\.py.*(no such file|not found|no existe)|(no such file|command not found|permission denied).*ot_regression/i.test(t)) return { tipo: 'slot', motivo: /permission denied/i.test(t) ? MOTIVO_CODIGO[126] : MOTIVO_CODIGO[127] };
   const m = t.match(RX_EJECUCION);
   if (m) return { tipo: 'ejecucion', n: parseInt(m[1], 10) };
   if (!RX_FALLA.test(t) || RX_NO_ES_FALLA.test(t)) return null;
@@ -99,8 +105,8 @@ function procesarLinea(e, linea) {
     return false;
   }
   e.estado = c.tipo;
-  e.error = { tipo: c.tipo, linea: t.slice(0, 400), ts: ahora, repeticiones: 1, loop: e.loop };
-  e.incidentes.push({ tipo: c.tipo, linea: t.slice(0, 400), ts: ahora, loop: e.loop });
+  e.error = { tipo: c.tipo, linea: (c.motivo || t).slice(0, 400), ts: ahora, repeticiones: 1, loop: e.loop };
+  e.incidentes.push({ tipo: c.tipo, linea: e.error.linea, ts: ahora, loop: e.loop });
   if (e.incidentes.length > 30) e.incidentes.shift();
   return true;
 }
@@ -137,7 +143,7 @@ function leer(s) {
         else if (e.estado !== 'sistema') {
           e.estado = 'slot';
           if (!e.error) {
-            e.error = { tipo: 'slot', linea: `El script terminó con código ${code}`, ts: Date.now(), repeticiones: 1, loop: e.loop };
+            e.error = { tipo: 'slot', linea: MOTIVO_CODIGO[code] || `El script terminó con código ${code}`, ts: Date.now(), repeticiones: 1, loop: e.loop };
             e.incidentes.push({ ...e.error });
           }
         }
