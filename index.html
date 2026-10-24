@@ -676,6 +676,66 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
 .h-av-bar i.caido { background: var(--error); }
 .hd-inc { margin-top: 4px; padding: 6px 8px; border-radius: 8px; background: color-mix(in srgb, var(--error) 8%, transparent); font-size: 11.5px; }
 .hd-inc code { display: block; margin-top: 2px; white-space: normal; word-break: break-word; }
+
+/* ===== Paneles retráctiles ===== */
+.layout { transition: grid-template-columns .38s cubic-bezier(.2,0,0,1), grid-template-rows .38s cubic-bezier(.2,0,0,1); }
+.layout.sin-anim, .layout.sin-anim * { transition: none !important; }
+.layout.act-cerrada { grid-template-columns: minmax(0, 1fr) 46px; }
+.layout.con-cerrada { grid-template-rows: minmax(0, 1fr) 40px; }
+.plegar { width: 28px; height: 28px; flex: none; display: grid; place-items: center; border: 0; border-radius: 50%; background: transparent; color: var(--on-surface-variant); cursor: pointer; transition: background .2s, color .2s, transform .35s cubic-bezier(.2,0,0,1); }
+.plegar svg { width: 16px; height: 16px; }
+.plegar:hover { background: color-mix(in srgb, var(--primary) 12%, transparent); color: var(--primary); }
+.act-head-der { display: flex; align-items: center; gap: 4px; margin-right: -6px; }
+/* Actividad recogida: pestaña vertical */
+.act-card { position: relative; }
+.act-tab { display: none; }
+.act-card.recogida > .card-head, .act-card.recogida > .telemetry-screen { display: none; }
+.act-card.recogida .act-tab { display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100%; height: 100%; padding: 10px 0 12px; border: 0; background: transparent; color: var(--on-surface-variant); cursor: pointer; animation: aparecer .25s cubic-bezier(.2,0,0,1); }
+.act-card.recogida .act-tab:hover { background: color-mix(in srgb, var(--primary) 7%, transparent); color: var(--primary); }
+.act-tab-flecha { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 50%; background: var(--surface-high); }
+.act-tab-flecha svg { width: 15px; height: 15px; transform: rotate(180deg); }
+.act-tab-txt { writing-mode: vertical-rl; transform: rotate(180deg); font: 700 11px var(--font); letter-spacing: .32em; }
+.act-tab-badge { min-width: 22px; height: 20px; padding: 0 6px; border-radius: 10px; display: grid; place-items: center; background: var(--primary); color: var(--on-primary); font: 700 10.5px var(--font); animation: aparecer .2s; }
+.act-tab-badge[hidden] { display: none; }
+.act-tab-badge.err { background: var(--error); color: #fff; }
+.act-tab-tira { flex: 1; min-height: 0; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 5px; overflow: hidden; padding-bottom: 2px; }
+.act-tab-tira i { width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--primary); animation: puntoEntra .4s cubic-bezier(.2,1.6,.4,1); }
+.act-tab-tira i.p-ok { background: var(--success); }
+.act-tab-tira i.p-warn { background: #e0a800; }
+.act-tab-tira i.p-err { background: var(--error); box-shadow: 0 0 0 3px color-mix(in srgb, var(--error) 25%, transparent); }
+@keyframes puntoEntra { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.act-tab.latido .act-tab-flecha { animation: tabLatido .6s ease; }
+@keyframes tabLatido { 0% { transform: scale(1); } 35% { transform: scale(1.22); background: color-mix(in srgb, var(--primary) 25%, var(--surface-high)); } 100% { transform: scale(1); } }
+.act-card.alerta { box-shadow: 0 0 0 2px var(--error), 0 0 18px color-mix(in srgb, var(--error) 35%, transparent); animation: alertaPanel 1.6s ease-in-out 3; }
+@keyframes alertaPanel { 50% { box-shadow: 0 0 0 2px var(--error), 0 0 4px transparent; } }
+/* Salida de terminal recogida: barra con la última línea */
+.uc-head { gap: 10px; }
+.uc-title { flex: none; }
+.uc-der { display: flex; align-items: center; gap: 2px; flex: none; }
+.uc-vista { display: none; flex: 1; min-width: 0; align-items: center; gap: 2px; font: 11px var(--mono); color: color-mix(in srgb, var(--terminal-text) 75%, transparent); }
+.uc-vista span { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.uc-cursor { flex: none; width: 7px; height: 13px; background: #a8c7fa; opacity: .8; animation: ucCursor 1s steps(1) 6; }
+.uc-vista.nueva span { animation: lineaEntra .35s cubic-bezier(.2,0,0,1); }
+@keyframes lineaEntra { from { transform: translateY(8px); opacity: 0; } to { transform: none; opacity: 1; } }
+.uc-nuevas { flex: none; height: 20px; padding: 0 9px; border-radius: 10px; display: none; align-items: center; background: #a8c7fa; color: #0b2a5b; font: 700 10.5px var(--font); }
+.bottom-console.recogida .uc-nuevas:not([hidden]) { display: inline-flex; }
+.bottom-console .plegar { color: #a8c7fa; transform: rotate(90deg); }
+.bottom-console .plegar:hover { background: rgba(168,199,250,.12); color: #d3e3fd; }
+.bottom-console.recogida .plegar { transform: rotate(-90deg); }
+.bottom-console.recogida .uc-vista { display: flex; }
+.bottom-console.recogida .console-output { display: none; }
+.bottom-console.recogida .uc-head { height: 100%; cursor: pointer; }
+.bottom-console.recogida .uc-btn { display: none; }
+.uc-head { user-select: none; }
+@keyframes ucCursor { 50% { opacity: 0; } }
+@media (max-width: 900px) {
+  .layout.act-cerrada { grid-template-rows: minmax(0, 1fr) 46px 160px; }
+  .layout.con-cerrada { grid-template-rows: minmax(0, 1fr) 160px 40px; }
+  .layout.act-cerrada.con-cerrada { grid-template-rows: minmax(0, 1fr) 46px 40px; }
+  .act-card.recogida .act-tab { flex-direction: row; padding: 0 14px; }
+  .act-tab-txt { writing-mode: horizontal-tb; transform: none; }
+  .act-tab-tira { flex-direction: row; justify-content: flex-end; }
+}
 </style>
   <link rel="stylesheet" href="manual/manual.css">
 </head>
@@ -757,18 +817,33 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
         <div class="slots-panel" id="slotsGrid"></div>
       </section>
 
-      <section class="card">
+      <section class="card act-card" id="act-card">
         <div class="card-head">
           <span class="card-title">Actividad</span>
-          <span class="card-meta" id="tl-count">—</span>
+          <span class="act-head-der">
+            <span class="card-meta" id="tl-count">—</span>
+            <button class="plegar" type="button" onclick="plegar('act')" title="Recoger actividad (Ctrl+B)" aria-label="Recoger actividad"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+          </span>
         </div>
         <div class="telemetry-screen" id="telemetryScreen"></div>
+        <!-- Pestaña cuando está recogida -->
+        <button class="act-tab" type="button" onclick="plegar('act')" title="Mostrar actividad (Ctrl+B)" aria-label="Mostrar actividad">
+          <span class="act-tab-flecha"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span>
+          <span class="act-tab-badge" id="act-badge" hidden>0</span>
+          <span class="act-tab-txt">ACTIVIDAD</span>
+          <span class="act-tab-tira" id="act-tira" aria-hidden="true"></span>
+        </button>
       </section>
 
-      <section class="bottom-console">
-        <div class="uc-head">
+      <section class="bottom-console" id="con-card">
+        <div class="uc-head" ondblclick="if (!event.target.closest('button')) plegar('con')">
           <span class="uc-title"><span class="uc-dots"><i></i><i></i><i></i></span>Salida de terminal</span>
-          <button class="uc-btn" onclick="consoleOutput.textContent=''">Limpiar</button>
+          <span class="uc-vista" id="uc-vista" aria-live="off"><span id="uc-ultima"></span><i class="uc-cursor"></i></span>
+          <span class="uc-nuevas" id="uc-nuevas" hidden>0</span>
+          <span class="uc-der">
+            <button class="uc-btn" onclick="consoleOutput.textContent=''">Limpiar</button>
+            <button class="plegar plegar-con" type="button" onclick="plegar('con')" title="Recoger / mostrar la salida (Ctrl+J)" aria-label="Recoger o mostrar la salida de terminal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+          </span>
         </div>
         <div class="console-output" id="consoleOutput">Esperando ejecución…</div>
       </section>
@@ -1116,7 +1191,72 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
       if (consoleOutput.textContent === 'Esperando ejecución…') consoleOutput.textContent = '';
       consoleOutput.textContent += text;
       consoleOutput.scrollTop = consoleOutput.scrollHeight;
+      avisoPanelConsola(text);
     }
+
+    /* ---------- Paneles retráctiles: Actividad (Ctrl+B) y Salida de terminal (Ctrl+J) ---------- */
+    var paneles = { act: false, con: false };          // true = recogido
+    try { paneles = { ...paneles, ...JSON.parse(localStorage.getItem('ort_paneles') || '{}') }; } catch (e) {}
+    var pendientes = { act: 0, actErr: false, con: 0 };
+    function aplicarPaneles(animar) {
+      const lay = document.querySelector('.layout');
+      if (!animar) lay.classList.add('sin-anim');
+      lay.classList.toggle('act-cerrada', !!paneles.act);
+      lay.classList.toggle('con-cerrada', !!paneles.con);
+      document.getElementById('act-card').classList.toggle('recogida', !!paneles.act);
+      document.getElementById('con-card').classList.toggle('recogida', !!paneles.con);
+      if (!animar) requestAnimationFrame(() => requestAnimationFrame(() => lay.classList.remove('sin-anim')));
+      if (!paneles.act) { pendientes.act = 0; pendientes.actErr = false; pintarPendientes(); telemetryScreen.scrollTop = telemetryScreen.scrollHeight; }
+      if (!paneles.con) { pendientes.con = 0; pintarPendientes(); consoleOutput.scrollTop = consoleOutput.scrollHeight; }
+      else ultimaLinea();
+    }
+    function plegar(cual) {
+      paneles[cual] = !paneles[cual];
+      try { localStorage.setItem('ort_paneles', JSON.stringify(paneles)); } catch (e) {}
+      aplicarPaneles(true);
+    }
+    function pintarPendientes() {
+      const b = document.getElementById('act-badge');
+      b.hidden = !pendientes.act; b.textContent = pendientes.act > 99 ? '99+' : pendientes.act;
+      b.classList.toggle('err', pendientes.actErr);
+      document.getElementById('act-card').classList.toggle('alerta', !!(paneles.act && pendientes.actErr));
+      const n = document.getElementById('uc-nuevas');
+      n.hidden = !pendientes.con; n.textContent = (pendientes.con > 999 ? '999+' : pendientes.con) + (pendientes.con === 1 ? ' línea nueva' : ' nuevas');
+    }
+    // Cada evento deja un puntito de color en la pestaña recogida (los últimos 14)
+    function avisoPanelActividad(tipo) {
+      if (!paneles.act) return;
+      pendientes.act++;
+      if (tipo === 'err') pendientes.actErr = true;
+      const tira = document.getElementById('act-tira');
+      const p = document.createElement('i'); p.className = 'p-' + tipo;
+      tira.appendChild(p);
+      while (tira.children.length > 14) tira.firstChild.remove();
+      const tab = document.querySelector('.act-tab');
+      tab.classList.remove('latido'); void tab.offsetWidth; tab.classList.add('latido');
+      pintarPendientes();
+    }
+    function ultimaLinea() {
+      const t = consoleOutput.textContent;
+      let fin = t.length;
+      while (fin > 0 && /\s/.test(t[fin - 1])) fin--;
+      const ini = t.lastIndexOf('\n', fin - 1) + 1;
+      document.getElementById('uc-ultima').textContent = t.slice(ini, fin).slice(-160) || 'Sin salida todavía';
+    }
+    function avisoPanelConsola(text) {
+      if (!paneles.con) return;
+      pendientes.con += Math.max(1, (String(text).match(/\n/g) || []).length);
+      ultimaLinea();
+      const v = document.getElementById('uc-vista');
+      v.classList.remove('nueva'); void v.offsetWidth; v.classList.add('nueva');
+      pintarPendientes();
+    }
+    document.addEventListener('keydown', (e) => {
+      if (!e.ctrlKey || e.altKey || e.metaKey) return;
+      const k = e.key.toLowerCase();
+      if (k === 'b') { e.preventDefault(); plegar('act'); }
+      else if (k === 'j') { e.preventDefault(); plegar('con'); }
+    });
     // La consola también se guarda en la PC (últimos 30 000 caracteres)
     (function persistirConsola() {
       let g = null;
@@ -1155,6 +1295,7 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
       document.getElementById('tl-count').textContent = eventos + ' eventos';
     }
     function tele(texto, tipo = 'info') {
+      avisoPanelActividad(tipo);
       const ahora = new Date();
       const hora = ahora.toLocaleTimeString('es-MX', { hour12: false });
       eventos++;
@@ -1594,6 +1735,7 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
 
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeGlobalConfigModal(); });
 
+    aplicarPaneles(false);
     tele('Sistema listo. Haz clic en un slot o usa “Lanzar todos”.', 'info');
 
     /* ---------- Manual de usuario ----------
