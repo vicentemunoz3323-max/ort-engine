@@ -612,7 +612,46 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
 .gear-btn svg { width: 14px; height: 14px; }
 .gear-btn:hover { background: color-mix(in srgb, var(--primary) 12%, transparent); color: var(--primary); transform: rotate(60deg); }
 .tm-btn:disabled { opacity: .4; cursor: not-allowed; background: transparent; }
+
+/* ===== Manual de usuario ===== */
+.modal-content.mn { width: 1180px; max-width: calc(100vw - 32px); height: 90vh; max-height: none; flex-direction: row; overflow: hidden; border-radius: 24px; background: var(--surface); }
+.mn-lado { flex: none; width: 262px; display: flex; flex-direction: column; gap: 10px; padding: 18px 12px 14px 16px; background: var(--surface-low); border-right: 1px solid var(--outline-variant); }
+.mn-marca { display: flex; align-items: center; gap: 10px; padding: 0 4px 4px; }
+.mn-marca img { width: 36px; height: 36px; border-radius: 9px; }
+.mn-marca b { display: block; font-size: 14px; font-weight: 600; letter-spacing: -.01em; }
+.mn-marca span { font-size: 11.5px; color: var(--on-surface-variant); }
+.mn-buscar { display: flex; align-items: center; gap: 8px; height: 38px; padding: 0 12px; border-radius: 19px; background: var(--surface); border: 1px solid var(--outline-variant); }
+.mn-buscar:focus-within { border-color: var(--primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 18%, transparent); }
+.mn-buscar svg { width: 16px; height: 16px; color: var(--on-surface-variant); flex: none; }
+.mn-buscar input { flex: 1; min-width: 0; border: 0; outline: none; background: transparent; color: var(--on-surface); font: 500 13px var(--font); }
+.mn-indice { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 1px; padding-right: 2px; }
+.mn-indice a { display: flex; align-items: center; gap: 9px; padding: 6px 10px 6px 6px; border-radius: 10px; color: var(--on-surface); text-decoration: none; font-size: 12.5px; line-height: 1.3; transition: background .15s; }
+.mn-indice a[hidden] { display: none; }
+.mn-indice a:hover { background: color-mix(in srgb, var(--on-surface) 6%, transparent); }
+.mn-indice a.activo { background: color-mix(in srgb, #e95420 13%, transparent); font-weight: 600; }
+.mn-n { flex: none; width: 22px; height: 22px; border-radius: 7px; display: grid; place-items: center; background: var(--surface-high); color: var(--on-surface-variant); font-size: 10.5px; font-weight: 700; }
+.mn-indice a.activo .mn-n { background: linear-gradient(135deg, #ff7a3d, #e95420); color: #fff; }
+.mn-pdf { display: flex; flex-direction: column; gap: 4px; padding-top: 10px; border-top: 1px solid var(--outline-variant); }
+.mn-pdf .btn { justify-content: center; }
+.mn-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.mn-barra { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px 10px 28px; border-bottom: 1px solid var(--outline-variant); }
+.mn-ruta { font-size: 12.5px; font-weight: 600; color: var(--on-surface-variant); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mn-cuerpo { flex: 1; min-height: 0; overflow-y: auto; padding: 22px 34px 60px; scroll-behavior: auto; }
+.mn-cuerpo .manual { max-width: 860px; margin: 0 auto; font-size: 13.5px; line-height: 1.6; }
+.mn-cuerpo .manual section { padding: 6px 0 26px; margin-bottom: 18px; border-bottom: 1px dashed var(--outline-variant); }
+.mn-cuerpo .manual section:last-child { border-bottom: 0; }
+.mn-cuerpo .manual section[hidden] { display: none; }
+.mn-cuerpo .manual h2 { font-size: 22px; }
+.mn-destello h2 { animation: mnDestello 1.2s ease; }
+@keyframes mnDestello { 0% { color: #e95420; } 100% { color: inherit; } }
+.mn-vacio { text-align: center; padding: 60px 0; color: var(--on-surface-variant); }
+.mn-vacio[hidden] { display: none; }
+:root[data-theme="dark"] .manual { --m-texto: #e3e3e3; --m-suave: #b8bbbe; --m-linea: #3c4043; --m-fondo: #26282b; --m-acento-suave: #3d2418; --m-azul: #a8c7fa;
+  --m-ok: #6dd58c; --m-ok-fondo: #13321d; --m-warn: #ffd665; --m-warn-fondo: #3a3115; --m-err: #f2b8b5; --m-err-fondo: #3d1b19; }
+:root[data-theme="dark"] .manual .nota { background: #1c2a40; }
+:root[data-theme="dark"] .manual figure img { border-color: #3c4043; }
 </style>
+  <link rel="stylesheet" href="manual/manual.css">
 </head>
 <body>
 
@@ -624,6 +663,9 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
     </div>
     <div class="top-actions">
       <span class="version-chip" id="version">v—</span>
+      <button id="btn-manual" class="icon-btn ripple" type="button" title="Manual de usuario (F1)" aria-label="Manual de usuario" onclick="abrirManual()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 5.5A1.5 1.5 0 0 1 3.5 4H9a3 3 0 0 1 3 3v13a2.5 2.5 0 0 0-2.5-2.5h-6A1.5 1.5 0 0 1 2 16z"/><path d="M22 5.5A1.5 1.5 0 0 0 20.5 4H15a3 3 0 0 0-3 3v13a2.5 2.5 0 0 1 2.5-2.5h6a1.5 1.5 0 0 0 1.5-1.5z"/></svg>
+      </button>
       <button id="btn-ntfy" class="icon-btn ripple" type="button" title="Notificaciones al celular" aria-label="Notificaciones al celular" onclick="abrirNtfy()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
         <i class="punto-ntfy"></i>
@@ -810,6 +852,39 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
         <span style="flex:1"></span>
         <button class="btn btn-text ripple" onclick="cerrarNtfy()">Cancelar</button>
         <button class="btn btn-filled ripple" onclick="guardarNtfy()">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Manual de usuario -->
+  <div class="modal-overlay" id="manualModal" onclick="if (event.target === this) cerrarManual()">
+    <div class="modal-content mn" role="dialog" aria-modal="true" aria-labelledby="mn-title">
+      <aside class="mn-lado">
+        <div class="mn-marca">
+          <img src="icons/64x64.png" alt="">
+          <div><b id="mn-title">Manual de usuario</b><span>ORT Engine · <span id="mn-ver"></span></span></div>
+        </div>
+        <label class="mn-buscar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+          <input id="mn-q" type="search" placeholder="Buscar en el manual" autocomplete="off" spellcheck="false">
+        </label>
+        <nav class="mn-indice" id="mn-indice" aria-label="Capítulos"></nav>
+        <div class="mn-pdf">
+          <button class="btn btn-tonal ripple" type="button" onclick="abrirManualPdf()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>
+            Abrir PDF
+          </button>
+          <button class="btn btn-text ripple" type="button" onclick="guardarManualPdf()">Guardar PDF…</button>
+        </div>
+      </aside>
+      <div class="mn-main">
+        <div class="mn-barra">
+          <span class="mn-ruta" id="mn-ruta">Manual de usuario</span>
+          <button class="icon-btn ripple" onclick="cerrarManual()" aria-label="Cerrar manual" title="Cerrar (Esc)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+          </button>
+        </div>
+        <div class="mn-cuerpo" id="mn-cuerpo"><div class="manual" id="mn-contenido"></div><div class="mn-vacio" id="mn-vacio" hidden>No encontré nada con esa búsqueda.</div></div>
       </div>
     </div>
   </div>
@@ -1486,6 +1561,95 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeGlobalConfigModal(); });
 
     tele('Sistema listo. Haz clic en un slot o usa “Lanzar todos”.', 'info');
+
+    /* ---------- Manual de usuario ----------
+       El contenido sale de manual/contenido.html (el mismo del PDF). */
+    let manualListo = false;
+    const sinAcentos = (t) => String(t).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    function cargarManual() {
+      if (manualListo) return true;
+      const cont = document.getElementById('mn-contenido');
+      try {
+        const fs = require('fs'), path = require('path');
+        const html = fs.readFileSync(path.join(__dirname, 'manual', 'contenido.html'), 'utf8');
+        cont.innerHTML = html.replace(/src="img\//g, 'src="manual/img/');
+      } catch (e) {
+        cont.innerHTML = '<p>No se pudo cargar el manual (' + escapar(e.message) + ').</p>';
+        return false;
+      }
+      const nav = document.getElementById('mn-indice');
+      nav.innerHTML = '';
+      cont.querySelectorAll('section[id]').forEach((sec, k) => {
+        const a = document.createElement('a');
+        a.href = '#' + sec.id;
+        a.dataset.sec = sec.id;
+        a.innerHTML = `<span class="mn-n">${k + 1}</span><span>${escapar(sec.dataset.titulo || '')}</span>`;
+        nav.appendChild(a);
+        sec.dataset.texto = sinAcentos(sec.textContent);
+      });
+      // enlaces dentro del manual y del índice: se mueven dentro del panel
+      document.getElementById('manualModal').addEventListener('click', (e) => {
+        const a = e.target.closest('a[href^="#m-"]');
+        if (!a) return;
+        e.preventDefault();
+        irASeccion(a.getAttribute('href').slice(1));
+      });
+      document.getElementById('mn-cuerpo').addEventListener('scroll', marcarSeccion, { passive: true });
+      manualListo = true;
+      return true;
+    }
+    function irASeccion(id) {
+      const sec = document.getElementById(id);
+      if (!sec) return;
+      if (sec.hidden) { document.getElementById('mn-q').value = ''; filtrarManual(); }
+      const cuerpo = document.getElementById('mn-cuerpo');
+      cuerpo.scrollTo({ top: sec.offsetTop - 12, behavior: 'smooth' });
+      sec.classList.remove('mn-destello'); void sec.offsetWidth; sec.classList.add('mn-destello');
+    }
+    function marcarSeccion() {
+      const cuerpo = document.getElementById('mn-cuerpo');
+      const secs = [...document.querySelectorAll('#mn-contenido section[id]')].filter((s) => !s.hidden);
+      let actual = secs[0];
+      for (const s of secs) if (s.offsetTop - cuerpo.scrollTop <= 80) actual = s;
+      if (cuerpo.scrollTop + cuerpo.clientHeight >= cuerpo.scrollHeight - 4 && secs.length) actual = secs[secs.length - 1];
+      document.querySelectorAll('#mn-indice a').forEach((a) => a.classList.toggle('activo', !!actual && a.dataset.sec === actual.id));
+      if (actual) document.getElementById('mn-ruta').textContent = actual.dataset.titulo;
+    }
+    function filtrarManual() {
+      const q = sinAcentos(document.getElementById('mn-q').value.trim());
+      let visibles = 0;
+      document.querySelectorAll('#mn-contenido section[id]').forEach((sec) => {
+        const ok = !q || sec.dataset.texto.includes(q);
+        sec.hidden = !ok;
+        document.querySelector(`#mn-indice a[data-sec="${sec.id}"]`).hidden = !ok;
+        if (ok) visibles++;
+      });
+      document.getElementById('mn-vacio').hidden = visibles > 0;
+      document.getElementById('mn-cuerpo').scrollTop = 0;
+      marcarSeccion();
+    }
+    document.getElementById('mn-q').addEventListener('input', filtrarManual);
+    function abrirManual(seccion) {
+      if (!cargarManual()) {}
+      document.getElementById('mn-ver').textContent = document.getElementById('version').textContent;
+      document.getElementById('manualModal').style.display = 'flex';
+      marcarSeccion();
+      if (seccion) setTimeout(() => irASeccion(seccion), 60);
+    }
+    function cerrarManual() { document.getElementById('manualModal').style.display = 'none'; }
+    async function abrirManualPdf() {
+      const r = await ipcRenderer.invoke('manual:abrir-pdf').catch((e) => ({ ok: false, mensaje: e.message }));
+      if (!r || !r.ok) mostrarToast({ titulo: 'No se pudo abrir el PDF', msg: (r && r.mensaje) || '', tipo: 'err', autoOcultar: 7000 });
+    }
+    async function guardarManualPdf() {
+      const r = await ipcRenderer.invoke('manual:guardar-pdf').catch((e) => ({ ok: false, mensaje: e.message }));
+      if (r && r.ok) mostrarToast({ titulo: 'Manual guardado', msg: r.ruta, tipo: 'ok', autoOcultar: 7000 });
+      else if (r && !r.cancelado) mostrarToast({ titulo: 'No se pudo guardar', msg: r.mensaje || '', tipo: 'err', autoOcultar: 7000 });
+    }
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'F1') { e.preventDefault(); abrirManual(); }
+      else if (e.key === 'Escape' && document.getElementById('manualModal').style.display === 'flex') cerrarManual();
+    });
 
     /* ---------- Versión y actualizaciones ---------- */
     const btnUpd = document.getElementById('btn-update');

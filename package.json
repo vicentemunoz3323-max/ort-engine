@@ -1,6 +1,6 @@
 {
   "name": "ort-engine",
-  "version": "1.1.6",
+  "version": "1.1.7",
   "description": "ORT Engine - Ghostfish Slot Manager",
   "main": "main.js",
   "desktopName": "ort-engine.desktop",

@@ -1,0 +1,335 @@
+<!-- ============================================================
+     MANUAL DE USUARIO · ORT ENGINE
+     Una sola fuente para el PDF y para la sección "Manual" de la app.
+     Cada <section> es un capítulo. Las imágenes van en manual/img/.
+     ============================================================ -->
+
+<section id="m-que-es" data-titulo="¿Qué es ORT Engine?">
+  <h2><span class="num">1</span> ¿Qué es ORT Engine?</h2>
+  <p><b>ORT Engine · Ghostfish Slot Manager</b> es la aplicación de la línea DRDT para manejar las <b>16 posiciones (slots)</b> de prueba de unidades Ghostfish desde una sola pantalla.</p>
+  <p>Por cada slot, la app hace todo el trabajo que antes se hacía a mano:</p>
+  <ol class="flujo">
+    <li><b>Lee la EEPROM</b> de la unidad con <code>read_eeprom_ghostfish.py</code> y obtiene su <b>serial</b> y su <b>número de parte (P/N)</b>.</li>
+    <li><b>Abre una terminal</b> llamada <code>SLOT 01</code>, <code>SLOT 02</code>… y corre la regresión con esos datos:<br><code class="bloque">~/viper-test/opentest/tools/ot_regression.py &lt;slot&gt; &lt;P/N&gt; &lt;serial&gt; &lt;loops&gt; 1200</code></li>
+    <li><b>Cuenta los loops</b> (8 horas cada uno), te dice en qué loop va, cuánto falta y a qué hora termina.</li>
+    <li><b>Guarda un historial</b> de cada unidad que entra y sale, y puede <b>avisarte al celular</b>.</li>
+  </ol>
+  <div class="nota"><b>Importante:</b> ORT Engine no reemplaza a los scripts de prueba; los ejecuta por ti con los datos correctos. La prueba sigue corriendo dentro de la terminal de cada slot.</div>
+</section>
+
+<section id="m-requisitos" data-titulo="Requisitos e instalación">
+  <h2><span class="num">2</span> Requisitos e instalación</h2>
+  <h3>Lo que necesita la PC</h3>
+  <table class="tabla">
+    <thead><tr><th>Componente</th><th>Para qué sirve</th><th>¿Obligatorio?</th></tr></thead>
+    <tbody>
+      <tr><td>Ubuntu con <b>gnome-terminal</b></td><td>Abrir una terminal por cada slot</td><td><span class="et ok">Sí</span></td></tr>
+      <tr><td><b>Python 3</b></td><td>Ejecutar el script de lectura de EEPROM</td><td><span class="et ok">Sí</span></td></tr>
+      <tr><td><code>read_eeprom_ghostfish.py</code></td><td>Leer serial y P/N de cada unidad</td><td><span class="et ok">Sí</span></td></tr>
+      <tr><td><code>~/viper-test/opentest/tools/ot_regression.py</code></td><td>La prueba de regresión</td><td><span class="et ok">Sí</span> (en la PC de pruebas)</td></tr>
+      <tr><td><b>wmctrl</b></td><td>Botón <i>Ir a la terminal</i></td><td><span class="et warn">Opcional</span></td></tr>
+      <tr><td>Sesión <b>X11</b> ("Ubuntu en Xorg")</td><td>Traer ventanas al frente</td><td><span class="et warn">Opcional</span></td></tr>
+    </tbody>
+  </table>
+  <p>La app busca <code>read_eeprom_ghostfish.py</code> por sí sola en tu Escritorio, Documentos, Descargas, Música, <code>~/scripts</code> y en el resto de tu carpeta personal. Basta con que esté en alguno de esos lugares.</p>
+  <h3>Instalar la app</h3>
+  <p>Descarga el archivo <code>.deb</code> de la última versión desde <b>GitHub → ort-engine → Releases</b> e instálalo desde la terminal:</p>
+  <pre>cd ~/Downloads
+sudo apt install ./ort-engine_*_amd64.deb</pre>
+  <div class="tip"><b>Tip:</b> el <code>./</code> es importante: sin él, <code>apt</code> busca el programa en internet en lugar de usar tu archivo. Si tu carpeta se llama <i>Descargas</i>, usa <code>cd ~/Descargas</code>.</div>
+  <p>Solo se instala así la primera vez. Después, la app se <b>actualiza sola</b> (ver capítulo <a href="#m-actualizaciones">Actualizaciones</a>).</p>
+</section>
+
+<section id="m-bienvenida" data-titulo="Primer inicio: asistente de bienvenida">
+  <h2><span class="num">3</span> Primer inicio: asistente de bienvenida</h2>
+  <p>La primera vez que abres ORT Engine aparece un asistente de 3 pasos que deja la PC lista para trabajar.</p>
+  <figure class="mitad"><img src="img/17-bienvenida.webp" width="1140" height="912" alt="Pantalla de bienvenida"><figcaption>Pantalla de bienvenida. Presiona <b>Comenzar</b>.</figcaption></figure>
+  <h3>Paso 1 · Revisión del sistema</h3>
+  <p>La app revisa que la PC tenga todo lo del capítulo anterior. Cada punto sale como <span class="et ok">Listo</span>, <span class="et warn">Se puede instalar</span> o con error.</p>
+  <figure class="mitad"><img src="img/18-revision.webp" width="1140" height="1130" alt="Revisión del sistema"><figcaption>Revisión del sistema. Lo que falte se instala con <b>Instalar lo que falta</b>.</figcaption></figure>
+  <ul>
+    <li><b>Instalar lo que falta</b> instala los programas que faltan (terminal, Python, wmctrl). Ubuntu te pedirá tu contraseña.</li>
+    <li>Los scripts (<code>read_eeprom_ghostfish.py</code>, <code>ot_regression.py</code>) no se instalan: si faltan, cópialos a la PC y presiona <b>Volver a revisar</b>.</li>
+  </ul>
+  <h3>Paso 2 · Avisos al celular</h3>
+  <p>Escribe el <b>tema de ntfy</b> al que te suscribiste en tu celular y presiona <b>Enviar prueba</b>. Si no quieres avisos, desmarca la casilla y continúa. Lo puedes cambiar después con la campana 🔔 (capítulo <a href="#m-ntfy">Notificaciones al celular</a>).</p>
+  <h3>Paso 3 · ¡Todo listo!</h3>
+  <p>Presiona <b>Entrar a ORT Engine</b>.</p>
+  <div class="tip"><b>Tip:</b> para volver a ver el asistente en cualquier momento, haz clic en el <b>logo de ORT Engine</b> (arriba a la izquierda).</div>
+</section>
+
+<section id="m-pantalla" data-titulo="La pantalla principal">
+  <h2><span class="num">4</span> La pantalla principal</h2>
+  <figure class="mapa">
+    <div class="mapa-img">
+      <img src="img/01-principal.webp" width="1500" height="938" alt="Pantalla principal de ORT Engine">
+      <i style="left:22.6%;top:2.8%">1</i>
+      <i style="left:80.4%;top:2.8%">2</i>
+      <i style="left:64.4%;top:8.0%">3</i>
+      <i style="left:36.6%;top:13.8%">4</i>
+      <i style="left:20.4%;top:31.4%">5</i>
+      <i style="left:87.4%;top:13.8%">6</i>
+      <i style="left:17.2%;top:82.4%">7</i>
+    </div>
+    <figcaption>La pantalla principal con 8 unidades corriendo, una leyendo, una con error y una cerrada.</figcaption>
+  </figure>
+  <table class="tabla leyenda">
+    <tbody>
+      <tr><td><i class="bola">1</i></td><td><b>Logo y nombre.</b> Clic en el logo = abrir el asistente de bienvenida.</td></tr>
+      <tr><td><i class="bola">2</i></td><td><b>Versión, 🔔 avisos al celular, ⟳ buscar actualizaciones, ☾ modo oscuro</b> y <b>📖 Manual</b>.</td></tr>
+      <tr><td><i class="bola">3</i></td><td><b>Historial · Loops · Reiniciar · Lanzar todos.</b> Las acciones generales.</td></tr>
+      <tr><td><i class="bola">4</i></td><td><b>Filtros</b> con contador: Todos, Activos, En proceso, Error y Libres.</td></tr>
+      <tr><td><i class="bola">5</i></td><td><b>Las 16 posiciones.</b> Cada tarjeta es un slot.</td></tr>
+      <tr><td><i class="bola">6</i></td><td><b>Actividad:</b> todo lo que pasa, con hora.</td></tr>
+      <tr><td><i class="bola">7</i></td><td><b>Salida de terminal:</b> el detalle técnico de cada lectura y lanzamiento.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="m-tarjetas" data-titulo="Las tarjetas de slot">
+  <h2><span class="num">5</span> Las tarjetas de slot</h2>
+  <div class="dos-col">
+    <figure><img src="img/07-tarjeta.webp" width="411" height="215" alt="Tarjeta de un slot corriendo"><figcaption>Slot 01 corriendo el loop 3 de 7.</figcaption></figure>
+    <div>
+      <h3>Qué muestra cada tarjeta</h3>
+      <ul>
+        <li><b>SLOT 01</b>: número de la posición.</li>
+        <li><b>Serial</b> en grande y debajo el <b>P/N</b>.</li>
+        <li><b>Loop 3/7 · 1h 24m</b>: va en el loop 3 de 0–7 y le falta 1 h 24 min para terminar ese loop.</li>
+        <li><b>Barra</b> con un segmento por loop: verde = hecho, azul = en curso.</li>
+      </ul>
+      <h3>Botones de la tarjeta</h3>
+      <ul class="iconos">
+        <li><span class="ic">▣</span> <b>Terminal</b> (solo aparece, en verde, cuando el slot tiene su terminal abierta).</li>
+        <li><span class="ic">⫶</span> <b>Ajustar loops</b> de ese slot.</li>
+        <li><span class="ic">⚙</span> <b>Engrane</b>: Ir a la terminal, Cerrar terminal y Reiniciar slot.</li>
+        <li><span class="ic">●</span> <b>Luz</b> de estado.</li>
+      </ul>
+    </div>
+  </div>
+  <h3>Estados de un slot</h3>
+  <figure><img src="img/02-tarjetas.webp" width="1500" height="400" alt="Tarjetas en distintos estados"></figure>
+  <table class="tabla">
+    <thead><tr><th>Se ve así</th><th>Estado</th><th>Qué significa</th></tr></thead>
+    <tbody>
+      <tr><td><span class="mini libre">Libre</span></td><td>Libre</td><td>No hay nada corriendo. Muestra cuántos loops tiene configurados (ej. <i>8 loops · 64 h</i>).</td></tr>
+      <tr><td><span class="mini leyendo">Boot 12 s</span></td><td>Leyendo</td><td>Está leyendo la EEPROM. Si falla, dice <i>Reintento 2</i>, <i>Reintento 3</i>… y sigue intentando.</td></tr>
+      <tr><td><span class="mini activo">Loop 3/7</span></td><td>Activo (verde)</td><td>La unidad tiene serial, su terminal está abierta y la regresión está corriendo.</td></tr>
+      <tr><td><span class="mini activo">✓ Completado</span></td><td>Completado</td><td>Ya pasaron todas las horas de sus loops. La terminal sigue abierta para revisar el resultado.</td></tr>
+      <tr><td><span class="mini libre">Cerrada</span></td><td>Cerrada</td><td>Se cerró la terminal. La tarjeta <b>conserva</b> el serial, P/N y hasta qué loop llegó.</td></tr>
+      <tr><td><span class="mini error">Sin script</span></td><td>Error</td><td>No se encontró <code>read_eeprom_ghostfish.py</code>.</td></tr>
+      <tr><td><span class="mini error">Interrumpido</span></td><td>Error</td><td>Se cerró la app mientras el slot leía. Vuelve a lanzarlo.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="m-lanzar" data-titulo="Leer un slot y lanzar la prueba">
+  <h2><span class="num">6</span> Leer un slot y lanzar la prueba</h2>
+  <h3>Un slot</h3>
+  <ol class="pasos">
+    <li>Conecta la unidad en su posición.</li>
+    <li>Haz <b>clic en la tarjeta</b> del slot (o selecciónala con <kbd>Tab</kbd> y presiona <kbd>Enter</kbd>).</li>
+    <li>La tarjeta se pone amarilla y cuenta <i>Boot 1 s, 2 s…</i> mientras lee la EEPROM.</li>
+    <li>Al obtener el serial, la tarjeta se pone <b>verde</b>, se abre la terminal <code>SLOT NN</code> y empieza la regresión con los loops de ese slot.</li>
+  </ol>
+  <div class="nota"><b>Lectura con límite:</b> si el script de lectura se traba más de <b>45 segundos</b>, la app lo detiene y reintenta sola. Si el script no existe, el slot se marca en rojo con <i>Sin script</i> en lugar de reintentar sin fin.</div>
+  <h3>Todos los slots</h3>
+  <p><b>Lanzar todos</b> arranca los slots que estén <b>libres o con error</b>, uno cada <b>5 segundos</b> para no saturar. Los slots que ya están corriendo no se tocan.</p>
+  <div class="aviso"><b>Ojo:</b> si haces clic en un slot que ya tiene su terminal abierta, la app te pregunta antes de cerrarla y volver a lanzarlo.</div>
+</section>
+
+<section id="m-loops" data-titulo="Loops">
+  <h2><span class="num">7</span> Loops</h2>
+  <p>Cada loop dura <b>8 horas</b> y se cuentan <b>desde 0</b>. El número que eliges es el <b>último loop</b>:</p>
+  <table class="tabla centrada">
+    <thead><tr><th>Eliges</th><th>Loops que corre</th><th>Total de loops</th><th>Duración</th></tr></thead>
+    <tbody>
+      <tr><td>0</td><td>0</td><td>1</td><td>8 h</td></tr>
+      <tr><td>1</td><td>0 y 1</td><td>2</td><td>16 h</td></tr>
+      <tr><td>3</td><td>0 a 3</td><td>4</td><td>32 h</td></tr>
+      <tr><td>5</td><td>0 a 5</td><td>6</td><td>48 h</td></tr>
+      <tr><td>7</td><td>0 a 7</td><td>8</td><td>64 h</td></tr>
+    </tbody>
+  </table>
+  <div class="dos-col">
+    <figure><img src="img/05-loops-slot.webp" width="423" height="227" alt="Ajustar loops de un slot"><figcaption>Un slot: botón <b>⫶</b> de la tarjeta → mueve la barra → <b>Aplicar</b>.</figcaption></figure>
+    <figure><img src="img/08-modal-loops.webp" width="996" height="906" alt="Loops de los 16 slots"><figcaption>Los 16 a la vez: botón <b>Loops</b> de arriba.</figcaption></figure>
+  </div>
+  <ul>
+    <li>Los loops <b>se guardan solos</b> y se recuerdan al cerrar y abrir la app.</li>
+    <li>Cambiar los loops <b>no afecta</b> a una unidad que ya está corriendo: se usan en el siguiente lanzamiento.</li>
+  </ul>
+  <h3>El contador</h3>
+  <p>Mientras corre, la tarjeta dice por ejemplo <b>Loop 3/7 · 1h 24m</b>. Si <b>pasas el mouse</b> encima, te dice el tiempo total que falta y <b>a qué hora termina</b>. Al terminar todos los loops, la tarjeta dice <b>✓ Completado</b> y te avisa con una notificación en la PC (y al celular, si lo tienes activado).</p>
+</section>
+
+<section id="m-engrane" data-titulo="Menú del engrane">
+  <h2><span class="num">8</span> Menú del engrane ⚙</h2>
+  <figure class="mitad"><img src="img/06-engrane.webp" width="831" height="227" alt="Menú del engrane"><figcaption>El engrane de cada slot abre este menú.</figcaption></figure>
+  <table class="tabla">
+    <tbody>
+      <tr><td><b>Ir a la terminal</b></td><td>Trae al frente la ventana <code>SLOT NN</code>. Necesita <b>wmctrl</b> y sesión <b>X11</b>; en Wayland Ubuntu no lo permite.</td></tr>
+      <tr><td><b>Cerrar terminal</b></td><td>Cierra la terminal del slot <b>y detiene la prueba</b> que corre en ella. Pide confirmación.</td></tr>
+      <tr><td><b>Reiniciar slot</b></td><td>Abre <i>Reiniciar slots</i> con ese slot ya marcado (capítulo siguiente).</td></tr>
+    </tbody>
+  </table>
+  <p>Si el slot no tiene terminal abierta, <i>Ir a la terminal</i> y <i>Cerrar terminal</i> se ven apagadas.</p>
+</section>
+
+<section id="m-reiniciar" data-titulo="Reiniciar slots">
+  <h2><span class="num">9</span> Reiniciar slots</h2>
+  <p><b>Reiniciar</b> deja uno, varios o todos los slots en <b>Libre</b> dentro de la app. Está protegido con <b>contraseña</b> (pídesela al responsable de la línea).</p>
+  <div class="dos-col">
+    <figure><img src="img/09-reiniciar-todos.webp" width="726" height="588" alt="Reiniciar todos"><figcaption><b>Todos</b>: reinicia los 16.</figcaption></figure>
+    <figure><img src="img/10-reiniciar-elegir.webp" width="726" height="870" alt="Elegir slots"><figcaption><b>Elegir slots</b>: toca los que quieras.</figcaption></figure>
+  </div>
+  <ol class="pasos">
+    <li>Presiona <b>Reiniciar</b> (arriba) o <b>⚙ → Reiniciar slot</b> en una tarjeta.</li>
+    <li>Elige <b>Todos</b> o <b>Elegir slots</b>. En <i>Elegir</i>, toca los cuadritos; los atajos <b>En uso</b>, <b>Con error</b>, <b>Todos</b> y <b>Ninguno</b> marcan varios de un jalón.</li>
+    <li>Si alguno tiene terminal abierta, decide si marcas <b>Cerrar también sus terminales</b>.</li>
+    <li>Escribe la contraseña y presiona el botón rojo (<i>Reiniciar slot 07</i>, <i>Reiniciar 2 slots</i>…).</li>
+  </ol>
+  <div class="aviso"><b>Sin la casilla marcada, las terminales NO se cierran:</b> la prueba sigue corriendo aunque la tarjeta quede en Libre. Márcala si de verdad quieres detener esas pruebas.</div>
+  <p>Cada slot reiniciado queda registrado en el <a href="#m-historial">Historial</a> con el motivo <i>Slot reiniciado</i> (o <i>Sistema reiniciado</i> si fueron los 16).</p>
+</section>
+
+<section id="m-filtros" data-titulo="Filtros">
+  <h2><span class="num">10</span> Filtros</h2>
+  <figure><img src="img/04-filtros.webp" width="863" height="60" alt="Filtros"></figure>
+  <p>Arriba de los slots. Cada filtro dice cuántos slots hay en ese estado. Al tocar uno, los slots que no coinciden se ven más tenues para que encuentres rápido, por ejemplo, los que tienen error. <b>Todos</b> regresa a la vista normal.</p>
+</section>
+
+<section id="m-historial" data-titulo="Historial">
+  <h2><span class="num">11</span> Historial</h2>
+  <p>Registra <b>cada unidad que entra a un slot</b>: serial, P/N, slot, hora de entrada, loops, avance, hora de salida y por qué salió.</p>
+  <figure><img src="img/11-historial.webp" width="1500" height="1104" alt="Historial"></figure>
+  <ul>
+    <li><b>Buscar</b> por serial, P/N o número de slot.</li>
+    <li><b>Filtrar</b> por estado (Corriendo, Completados, Detenidos) y por periodo (Hoy, 7 días, 30 días, Todo).</li>
+    <li><b>Clic en una fila</b> para ver todo el detalle: tiempo de lectura, intentos, fin estimado, PC, usuario y el comando exacto que se corrió.</li>
+    <li><b>Exportar a Excel</b> guarda lo que estás viendo (con los filtros aplicados) en un archivo <code>.csv</code> que abre Excel o LibreOffice con acentos correctos.</li>
+    <li><b>Abrir carpeta</b> muestra dónde se guarda: <code>~/.config/ort-engine/historial.json</code>.</li>
+  </ul>
+  <figure><img src="img/12-historial-detalle.webp" width="1500" height="1104" alt="Detalle de un registro"><figcaption>Detalle de un registro.</figcaption></figure>
+  <p>Motivos de salida que vas a ver: <i>Terminó sus N loops</i>, <i>La ventana de la terminal se cerró</i>, <i>Terminal cerrada desde la app</i>, <i>Se volvió a lanzar el slot</i>, <i>Slot reiniciado</i>, <i>Sistema reiniciado</i> y <i>La terminal se cerró mientras la app estaba cerrada</i>.</p>
+  <div class="tip"><b>El historial no se pierde</b> al cerrar la app ni al actualizarla.</div>
+</section>
+
+<section id="m-ntfy" data-titulo="Notificaciones al celular">
+  <h2><span class="num">12</span> Notificaciones al celular 🔔</h2>
+  <p>ORT Engine puede mandarte avisos a la app gratuita <b>ntfy</b> (Android y iPhone).</p>
+  <div class="dos-col">
+    <figure><img src="img/13-ntfy.webp" width="816" height="909" alt="Notificaciones al celular"></figure>
+    <div>
+      <h3>Configurarlas</h3>
+      <ol class="pasos">
+        <li>Instala <b>ntfy</b> en tu celular y suscríbete a un <b>tema</b> (un nombre, por ejemplo <code>drdt-linea4-x7</code>).</li>
+        <li>En ORT Engine toca la <b>campana 🔔</b> de arriba.</li>
+        <li>Activa <b>Enviar notificaciones</b> y escribe el <b>mismo tema</b>.</li>
+        <li>Elige cuándo avisarte: cuando <b>entra</b> una unidad, cuando <b>termina</b> sus loops o cuando se <b>detiene</b> antes de terminar.</li>
+        <li>Presiona <b>Enviar prueba</b>: te debe llegar un aviso. Luego <b>Guardar</b>.</li>
+      </ol>
+      <p>La campana tiene un <b>punto verde</b> cuando los avisos están activos.</p>
+    </div>
+  </div>
+  <div class="aviso"><b>Privacidad:</b> los temas de ntfy.sh son públicos. Usa un nombre difícil de adivinar. Si tu tema está protegido, pon tu token en <i>Token de acceso</i>.</div>
+</section>
+
+<section id="m-actividad" data-titulo="Actividad y salida de terminal">
+  <h2><span class="num">13</span> Actividad y salida de terminal</h2>
+  <div class="dos-col">
+    <figure><img src="img/14-actividad.webp" width="503" height="780" alt="Actividad"><figcaption>Actividad.</figcaption></figure>
+    <div>
+      <p><b>Actividad</b> (a la derecha) es la bitácora de lo que pasa, con hora y color: azul información, amarillo en proceso, verde éxito y rojo error. Guarda los últimos 80 eventos.</p>
+      <p><b>Salida de terminal</b> (abajo) muestra el detalle técnico: cada lectura, reintentos y el comando con el que se abrió cada terminal. <b>Limpiar</b> la vacía.</p>
+    </div>
+  </div>
+  <figure><img src="img/15-consola.webp" width="1500" height="178" alt="Salida de terminal"><figcaption>Salida de terminal.</figcaption></figure>
+</section>
+
+<section id="m-conserva" data-titulo="Qué se conserva al cerrar la app">
+  <h2><span class="num">14</span> Qué se conserva al cerrar la app</h2>
+  <p>Puedes cerrar ORT Engine sin miedo: <b>las terminales siguen corriendo</b> y al volver a abrir la app todo aparece como lo dejaste.</p>
+  <table class="tabla">
+    <thead><tr><th>Qué</th><th>Al volver a abrir la app…</th></tr></thead>
+    <tbody>
+      <tr><td>Slots corriendo</td><td>Se recuperan con su serial, P/N y contador de loops (dice <i>Slot 01 recuperado</i> en Actividad).</td></tr>
+      <tr><td>Slots con terminal cerrada</td><td>Conservan serial, P/N, <i>Cerrada</i> o <i>Completado</i> y hasta qué loop llegaron.</td></tr>
+      <tr><td>Slots con error</td><td>Siguen en rojo con su error.</td></tr>
+      <tr><td>Slots que estaban leyendo</td><td>Salen como <i>Interrumpido</i> para que los vuelvas a lanzar.</td></tr>
+      <tr><td>Loops de cada slot</td><td>Se recuerdan.</td></tr>
+      <tr><td>Actividad y Salida de terminal</td><td>Se recuperan, con una línea <i>App abierta de nuevo</i> para ubicarte.</td></tr>
+      <tr><td>Historial, avisos al celular y tema claro/oscuro</td><td>Se recuerdan.</td></tr>
+    </tbody>
+  </table>
+  <div class="nota">Una tarjeta solo se limpia cuando <b>tú</b> la reinicias o la vuelves a lanzar.</div>
+  <div class="aviso"><b>Si apagas o reinicias la PC</b>, las terminales se cierran y las pruebas se detienen. Al abrir la app, esos slots salen como <i>Cerrada</i> con hasta dónde llegaron, y el historial lo registra.</div>
+</section>
+
+<section id="m-actualizaciones" data-titulo="Actualizaciones">
+  <h2><span class="num">15</span> Actualizaciones</h2>
+  <figure class="mitad"><img src="img/16-actualizacion.webp" width="618" height="207" alt="Aviso de actualización"></figure>
+  <ol class="pasos">
+    <li>Al abrirse, y luego cada hora, la app revisa si hay una versión nueva. También puedes revisar con el botón <b>⟳</b> de arriba.</li>
+    <li>Si hay una, aparece un aviso abajo: presiona <b>Descargar</b>.</li>
+    <li>Cuando termine, presiona <b>Reiniciar e instalar</b>. Ubuntu te pedirá tu contraseña. Si prefieres esperar, se instala sola al cerrar la app.</li>
+  </ol>
+  <p>La versión que tienes se ve arriba a la derecha y en el pie de la pantalla.</p>
+  <div class="tip"><b>Tranquilo:</b> actualizar no borra tu historial, tus loops ni el estado de los slots.</div>
+</section>
+
+<section id="m-oscuro" data-titulo="Modo oscuro">
+  <h2><span class="num">16</span> Modo oscuro</h2>
+  <figure><img src="img/20-oscuro.webp" width="1500" height="938" alt="Modo oscuro"></figure>
+  <p>El botón <b>☾ / ☀</b> de arriba a la derecha cambia entre modo claro y oscuro. La app recuerda tu elección.</p>
+</section>
+
+<section id="m-manual" data-titulo="Este manual dentro de la app">
+  <h2><span class="num">17</span> Este manual dentro de la app</h2>
+  <figure><img src="img/21-manual-app.webp" width="1500" height="938" alt="Manual dentro de la app"></figure>
+  <ul>
+    <li>Ábrelo con el botón <b>📖</b> de arriba a la derecha o con la tecla <kbd>F1</kbd>.</li>
+    <li>A la izquierda está el <b>índice</b>: toca un capítulo para ir directo. El capítulo que estás leyendo se marca en naranja.</li>
+    <li><b>Buscar en el manual</b> deja solo los capítulos que mencionan lo que escribes (por ejemplo <i>wmctrl</i> o <i>contraseña</i>).</li>
+    <li><b>Abrir PDF</b> abre esta misma guía en PDF y <b>Guardar PDF…</b> la guarda donde quieras para imprimirla o compartirla.</li>
+    <li>Ciérralo con la <b>X</b> o con <kbd>Esc</kbd>.</li>
+  </ul>
+</section>
+
+<section id="m-problemas" data-titulo="Solución de problemas">
+  <h2><span class="num">18</span> Solución de problemas</h2>
+  <table class="tabla problemas">
+    <thead><tr><th>Lo que pasa</th><th>Qué hacer</th></tr></thead>
+    <tbody>
+      <tr><td>El slot dice <b>Sin script</b></td><td>Falta <code>read_eeprom_ghostfish.py</code>. Cópialo a tu Escritorio, Documentos o <code>~/scripts</code> y vuelve a lanzar el slot.</td></tr>
+      <tr><td>El slot se queda en <b>Reintento 2, 3, 4…</b></td><td>La unidad no responde. Revisa que esté bien conectada y encendida. Mira la <i>Salida de terminal</i> para ver el error del script.</td></tr>
+      <tr><td><b>Ir a la terminal</b> no hace nada</td><td>Instala wmctrl (<code>sudo apt install wmctrl</code>) y entra a Ubuntu con <b>"Ubuntu en Xorg"</b>. En Wayland no se puede traer ventanas al frente.</td></tr>
+      <tr><td>El slot salió <b>Cerrada</b> sin que yo la cerrara</td><td>La ventana de la terminal se cerró o la PC se reinició. El historial dice hasta qué loop llegó. Vuelve a lanzar el slot si hay que repetir la prueba.</td></tr>
+      <tr><td>El slot salió <b>Interrumpido</b></td><td>La app se cerró mientras leía. Haz clic en el slot para volver a lanzarlo.</td></tr>
+      <tr><td>Reiniciar dice <b>Contraseña incorrecta</b></td><td>Pide la contraseña de reinicio al responsable de la línea.</td></tr>
+      <tr><td>No me llegan avisos al celular</td><td>Revisa que el tema sea <b>idéntico</b> en el celular y en la app, que el interruptor esté activado y usa <b>Enviar prueba</b>. La PC necesita internet.</td></tr>
+      <tr><td>No me aparece la actualización</td><td>Solo funciona con la app instalada desde el <code>.deb</code>. Revisa con el botón ⟳ y que la PC tenga internet.</td></tr>
+      <tr><td>La terminal se abre y se cierra de inmediato</td><td>Revisa que exista <code>~/viper-test/opentest/tools/ot_regression.py</code> (paso 1 del asistente: clic en el logo).</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="m-rapida" data-titulo="Referencia rápida">
+  <h2><span class="num">19</span> Referencia rápida</h2>
+  <div class="rapida">
+    <div><b>Leer y lanzar un slot</b><span>Clic en la tarjeta</span></div>
+    <div><b>Lanzar todos los libres</b><span>Botón <i>Lanzar todos</i> (uno cada 5 s)</span></div>
+    <div><b>Loops de un slot</b><span>Botón ⫶ de la tarjeta → Aplicar</span></div>
+    <div><b>Loops de los 16</b><span>Botón <i>Loops</i></span></div>
+    <div><b>Ir / cerrar terminal</b><span>⚙ de la tarjeta</span></div>
+    <div><b>Reiniciar uno o varios</b><span><i>Reiniciar</i> → Elegir slots, o ⚙ → Reiniciar slot</span></div>
+    <div><b>Ver unidades pasadas</b><span>Botón <i>Historial</i></span></div>
+    <div><b>Exportar a Excel</b><span>Historial → Exportar a Excel</span></div>
+    <div><b>Avisos al celular</b><span>Campana 🔔</span></div>
+    <div><b>Buscar actualización</b><span>Botón ⟳</span></div>
+    <div><b>Modo oscuro</b><span>Botón ☾</span></div>
+    <div><b>Asistente de bienvenida</b><span>Clic en el logo</span></div>
+    <div><b>Este manual</b><span>Botón 📖 de arriba</span></div>
+    <div><b>1 loop</b><span>8 horas · 7 = loops 0 a 7 = 64 h</span></div>
+  </div>
+</section>

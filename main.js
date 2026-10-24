@@ -446,6 +446,31 @@ ipcMain.handle('historial:exportar', async (_e, csv, nombre) => {
   }
 });
 
+/* ---------- Manual de usuario (PDF incluido en la app) ----------
+   El PDF va dentro de la app (manual/Manual-ORT-Engine.pdf). Como dentro del paquete
+   no se puede abrir directo, se copia a la carpeta de datos y se abre desde ahí. */
+const PDF_MANUAL = path.join(__dirname, 'manual', 'Manual-ORT-Engine.pdf');
+ipcMain.handle('manual:abrir-pdf', async () => {
+  try {
+    const destino = path.join(app.getPath('userData'), 'Manual-ORT-Engine.pdf');
+    fs.writeFileSync(destino, fs.readFileSync(PDF_MANUAL));
+    const err = await shell.openPath(destino);
+    return err ? { ok: false, mensaje: err, ruta: destino } : { ok: true, ruta: destino };
+  } catch (e) { return { ok: false, mensaje: e.message }; }
+});
+ipcMain.handle('manual:guardar-pdf', async () => {
+  try {
+    const r = await dialog.showSaveDialog(mainWindow, {
+      title: 'Guardar manual de usuario',
+      defaultPath: path.join(app.getPath('documents'), 'Manual-ORT-Engine.pdf'),
+      filters: [{ name: 'PDF', extensions: ['pdf'] }]
+    });
+    if (r.canceled || !r.filePath) return { ok: false, cancelado: true };
+    fs.writeFileSync(r.filePath, fs.readFileSync(PDF_MANUAL));
+    return { ok: true, ruta: r.filePath };
+  } catch (e) { return { ok: false, mensaje: e.message }; }
+});
+
 ipcMain.handle('historial:carpeta', () => {
   const f = archivoHistorial();
   if (fs.existsSync(f)) shell.showItemInFolder(f);
