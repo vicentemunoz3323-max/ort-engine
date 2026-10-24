@@ -606,6 +606,12 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
 /* Registro de actividad recuperado */
 .tl.viejo { opacity: .6; }
 .tl-sep { margin: 6px 0; padding: 3px 0; text-align: center; font-size: 10.5px; font-weight: 600; letter-spacing: .02em; color: var(--primary); border-top: 1px dashed var(--outline-variant); border-bottom: 1px dashed var(--outline-variant); }
+
+/* Engrane de opciones del slot */
+.gear-btn { width: 22px; height: 22px; display: grid; place-items: center; border: 0; border-radius: 50%; background: transparent; color: var(--on-surface-variant); cursor: pointer; transition: background .2s, color .2s, transform .35s cubic-bezier(.2,0,0,1); }
+.gear-btn svg { width: 14px; height: 14px; }
+.gear-btn:hover { background: color-mix(in srgb, var(--primary) 12%, transparent); color: var(--primary); transform: rotate(60deg); }
+.tm-btn:disabled { opacity: .4; cursor: not-allowed; background: transparent; }
 </style>
 </head>
 <body>
@@ -995,6 +1001,7 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
     const ICONO_IR = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6"/><path d="M20 4l-9 9"/><path d="M18 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4"/></svg>';
     const ICONO_CERRAR = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
     const ICONO_REINICIO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>';
+    const ICONO_ENGRANE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>';
     const ICONO_AJUSTE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>';
 
     function logToConsole(text) {
@@ -1275,6 +1282,7 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
           <span class="slot-tools">
             <button class="term-btn" onclick="abrirMenuTerminal(${i}, event)" title="Terminal del slot ${i}" aria-label="Terminal del slot ${i}">${ICONO_TERMINAL}</button>
             <button class="config-toggle-btn" onclick="toggleConfigPanel(${i}, event)" title="Ajustar loops" aria-label="Ajustar loops del slot ${i}">${ICONO_AJUSTE}</button>
+            <button class="gear-btn" onclick="abrirMenuTerminal(${i}, event)" title="Opciones del slot ${i}" aria-label="Opciones del slot ${i}">${ICONO_ENGRANE}</button>
             <span class="slot-led" id="led-${i}"></span>
           </span>
         </div>
@@ -1291,8 +1299,8 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
         </div>
 
         <div class="term-menu" id="tmenu-${i}" style="display:none" onclick="event.stopPropagation()">
-          <button class="tm-btn" onclick="irATerminal(${i})">${ICONO_IR}Ir a la terminal</button>
-          <button class="tm-btn peligro" onclick="cerrarTerminal(${i})">${ICONO_CERRAR}Cerrar terminal</button>
+          <button class="tm-btn tm-term" onclick="irATerminal(${i})">${ICONO_IR}Ir a la terminal</button>
+          <button class="tm-btn peligro tm-term" onclick="cerrarTerminal(${i})">${ICONO_CERRAR}Cerrar terminal</button>
           <button class="tm-btn peligro" onclick="reiniciarUnSlot(${i})">${ICONO_REINICIO}Reiniciar slot</button>
           <button class="tm-btn cancelar" onclick="document.getElementById('tmenu-${i}').style.display='none'">Cancelar</button>
         </div>
@@ -1577,6 +1585,9 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
       event.stopPropagation();
       document.getElementById(`config-${i}`).style.display = 'none';
       const menu = document.getElementById(`tmenu-${i}`);
+      // sin terminal abierta, las opciones de terminal se ven pero no se pueden usar
+      const hay = conTerminal.has(i);
+      menu.querySelectorAll('.tm-term').forEach((b) => { b.disabled = !hay; b.title = hay ? '' : 'Este slot no tiene terminal abierta'; });
       menu.style.display = menu.style.display === 'none' ? 'flex' : 'none';
     }
 
