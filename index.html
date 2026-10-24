@@ -652,6 +652,30 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
   --m-ok: #6dd58c; --m-ok-fondo: #13321d; --m-warn: #ffd665; --m-warn-fondo: #3a3115; --m-err: #f2b8b5; --m-err-fondo: #3d1b19; }
 :root[data-theme="dark"] .manual .nota { background: #1c2a40; }
 :root[data-theme="dark"] .manual figure img { border-color: #3c4043; }
+
+/* ===== Slot caído / sistema caído ===== */
+.slot-card.caido { border-color: var(--error); background: color-mix(in srgb, var(--error) 9%, var(--surface)); }
+.slot-card.caido .slot-led { background: var(--error); animation: parpadeo .9s ease-in-out infinite; }
+.slot-card.caido .slot-status { background: var(--error); color: #fff; }
+:root[data-theme="dark"] .slot-card.caido .slot-status { color: #410e0b; }
+.slot-card.caido .slot-loop b { color: var(--error); }
+.slot-card.sist-caido { border-style: dashed; }
+.loop-bar i.falla::after { width: 100%; background: var(--error); }
+.sistema-caido { display: flex; align-items: center; gap: 12px; margin: 0 0 12px; padding: 10px 14px; border-radius: 14px; background: var(--error); color: #fff; box-shadow: 0 6px 18px color-mix(in srgb, var(--error) 35%, transparent); animation: aparecer .2s cubic-bezier(.2,0,0,1); }
+.sistema-caido[hidden] { display: none; }
+:root[data-theme="dark"] .sistema-caido { background: #8c1d18; }
+.sc-ico { font-size: 20px; line-height: 1; }
+.sc-txt { flex: 1; min-width: 0; font-size: 13px; }
+.sc-txt b { letter-spacing: .04em; }
+.sc-desde { opacity: .85; }
+.sc-txt code { display: block; margin-top: 3px; font: 11.5px var(--mono); opacity: .92; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sc-cerrar { height: 30px; padding: 0 12px; border-radius: 15px; border: 1px solid rgba(255,255,255,.5); background: transparent; color: #fff; font: 600 12px var(--font); cursor: pointer; }
+.sc-cerrar:hover { background: rgba(255,255,255,.15); }
+.h-pill.caido { background: var(--error-container); color: var(--error); }
+.ch-dot.hd-caido { background: var(--error); }
+.h-av-bar i.caido { background: var(--error); }
+.hd-inc { margin-top: 4px; padding: 6px 8px; border-radius: 8px; background: color-mix(in srgb, var(--error) 8%, transparent); font-size: 11.5px; }
+.hd-inc code { display: block; margin-top: 2px; white-space: normal; word-break: break-word; }
 </style>
   <link rel="stylesheet" href="manual/manual.css">
 </head>
@@ -719,6 +743,11 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
     </div>
     </div>
 
+    <div class="sistema-caido" id="sistema-caido" role="alert" hidden>
+      <span class="sc-ico">⚠</span>
+      <div class="sc-txt"><b>SISTEMA CAÍDO</b> · <span id="sc-slots"></span> <span class="sc-desde" id="sc-desde"></span><code id="sc-linea"></code></div>
+      <button class="sc-cerrar" onclick="sistemaOculto = true; document.getElementById('sistema-caido').hidden = true;" title="Ocultar este aviso">Ocultar</button>
+    </div>
     <div class="layout">
       <section class="card">
         <div class="card-head">
@@ -914,6 +943,7 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
           <button class="chip" data-hest="corriendo" aria-pressed="false"><span class="ch-dot hd-run"></span>Corriendo</button>
           <button class="chip" data-hest="completado" aria-pressed="false"><span class="ch-dot hd-ok"></span>Completados</button>
           <button class="chip" data-hest="detenido" aria-pressed="false"><span class="ch-dot hd-stop"></span>Detenidos</button>
+          <button class="chip" data-hest="caido" aria-pressed="false"><span class="ch-dot hd-caido"></span>Caídos</button>
         </div>
         <select id="hist-periodo" class="hist-select" aria-label="Periodo">
           <option value="1">Hoy</option>
@@ -1057,6 +1087,7 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
     var appLista = false;              // los avisos solo salen cuando la app ya terminó de cargar
     try { corridas = JSON.parse(localStorage.getItem('ort_corridas') || '{}'); } catch (e) {}
     const pad = (n) => (n < 10 ? '0' + n : '' + n);
+    var monitor = {};                  // salida de cada terminal: loop real y errores (lo manda main.js)
 
     // Lo que muestra cada tarjeta cuando ya no está corriendo (terminal cerrada, error,
     // lectura interrumpida). Se guarda en la PC y se ve igual al volver a abrir la app,
@@ -1154,9 +1185,10 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
     function actualizarResumen() {
       let ok = 0, run = 0, err = 0;
       for (let i = 1; i <= 16; i++) {
-        if (slotStates[i] === 'synced') ok++;
-        else if (slotStates[i] === 'running') run++;
-        else if (slotStates[i] === 'error') err++;
+        const e = estadoVisible(i);
+        if (e === 'synced') ok++;
+        else if (e === 'running') run++;
+        else if (e === 'error') err++;
       }
       document.getElementById('c-all').textContent = 16;
       document.getElementById('c-ok').textContent = ok;
@@ -1173,7 +1205,7 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
       for (let i = 1; i <= 16; i++) {
         const card = document.querySelector(`[data-slot="${i}"]`);
         if (!card) continue;
-        const coincide = filtro === 'all' || slotStates[i] === ESTADO_FILTRO[filtro];
+        const coincide = filtro === 'all' || estadoVisible(i) === ESTADO_FILTRO[filtro];
         card.classList.toggle('dim', !coincide);
       }
     }
@@ -1897,19 +1929,50 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
         return;
       }
 
-      const transcurrido = Date.now() - c.inicio;
-      const fin = c.inicio + total * MS_LOOP;
-      const actual = Math.min(total - 1, Math.floor(transcurrido / MS_LOOP));
-      const dentro = transcurrido - actual * MS_LOOP;
+      // Con la salida de la terminal (Execution N started successfully) se usan los loops reales;
+      // si no hay datos (corrida de una versión anterior), se usa el reloj de 8 h por loop.
+      const m = monitor[i];
+      const real = !!(m && m.slot === i && (m.estado !== 'esperando' || m.loop !== null || m.exit !== null || (m.lineas && m.lineas.length)) && monitorDeCorrida(i));
+      card.classList.toggle('caido', real && (m.estado === 'slot' || m.estado === 'sistema'));
+      card.classList.toggle('sist-caido', real && m.estado === 'sistema');
+      const statusEl = document.getElementById(`status-${i}`);
+      if (real && (m.estado === 'slot' || m.estado === 'sistema')) {
+        const n = m.loop === null ? -1 : Math.min(total - 1, m.loop);
+        txt.innerHTML = `<b>⚠ ${m.estado === 'sistema' ? 'Sistema caído' : 'Slot caído'}</b>` + (n >= 0 ? ` · loop ${n}/${ultimo}` : '');
+        txt.title = `${m.error ? m.error.linea : ''}\n${m.error ? 'Desde ' + fechaHora(m.error.ts) : ''}${m.exit !== null ? '\nEl script terminó (código ' + m.exit + ')' : ''}`;
+        if (statusEl && statusEl.textContent !== (m.estado === 'sistema' ? 'Sistema' : 'Caído')) statusEl.textContent = m.estado === 'sistema' ? 'Sistema' : 'Caído';
+        Array.from(segs).forEach((sg, k) => { sg.className = k < n ? 'hecho' : k === n ? 'falla' : ''; sg.style.removeProperty('--p'); });
+        card.classList.remove('terminado');
+        return;
+      }
+      if (statusEl && statusEl.textContent !== 'Sync' && slotStates[i] === 'synced') statusEl.textContent = 'Sync';
+      if (real && m.estado === 'esperando' && m.exit === null) {
+        txt.innerHTML = 'Iniciando prueba…';
+        txt.title = 'Esperando el primer "Execution 0 started successfully" de la terminal';
+        for (const sg of segs) { sg.className = ''; sg.style.removeProperty('--p'); }
+        return;
+      }
+      let transcurrido = Date.now() - c.inicio;
+      let fin = c.inicio + total * MS_LOOP;
+      let actual = Math.min(total - 1, Math.floor(transcurrido / MS_LOOP));
+      let dentro = transcurrido - actual * MS_LOOP;
+      let terminado = transcurrido >= total * MS_LOOP;
+      if (real) {
+        actual = Math.max(0, Math.min(total - 1, m.loop === null ? 0 : m.loop));
+        dentro = Math.max(0, Date.now() - (m.loopTs || c.inicio));
+        fin = (m.loopTs || c.inicio) + (total - actual) * MS_LOOP;
+        terminado = m.estado === 'terminado' && m.exit === 0;
+        if (terminado) { fin = m.exitTs || Date.now(); transcurrido = fin - c.inicio; }
+      }
 
-      if (transcurrido >= total * MS_LOOP) {
+      if (terminado) {
         txt.innerHTML = `<b>✓ Completado</b> · ${total * HORAS_POR_LOOP} h`;
         txt.title = `Terminó ${fechaHora(fin)}`;
         for (const s of segs) { s.className = 'hecho'; s.style.removeProperty('--p'); }
         card.classList.add('terminado');
         if (c.hid && !c.cerradoHist) {
           c.cerradoHist = true; guardarCorridas();
-          guardarRegistro({ id: c.hid, estado: 'completado', salida: fin, motivo: `Terminó sus ${total} loops`, loopAlcanzado: total - 1, horasCorridas: total * HORAS_POR_LOOP });
+          guardarRegistro({ id: c.hid, estado: 'completado', salida: fin, motivo: real ? `Terminó sus ${total} loops (el script cerró con código 0)` : `Terminó sus ${total} loops`, loopAlcanzado: total - 1, horasCorridas: +((fin - c.inicio) / 3600000).toFixed(2) });
           notificar('fin', {
             title: `Slot ${pad(i)} · Terminó ✔`,
             message: `${c.serial} · P/N ${c.pn}\nCompletó ${total} loops (${total * HORAS_POR_LOOP} h)\nTerminó: ${fechaCorta(fin)}`,
@@ -1926,8 +1989,11 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
       }
 
       card.classList.remove('terminado');
-      txt.innerHTML = `Loop <b>${actual}/${ultimo}</b> · ${duracion(MS_LOOP - dentro)}`;
-      txt.title = `Loop ${actual} de 0–${ultimo} · quedan ${duracion(MS_LOOP - dentro)} de este loop\nTotal restante: ${duracion(fin - Date.now())} · termina ${fechaHora(fin)}`;
+      const queda = MS_LOOP - dentro;
+      txt.innerHTML = `Loop <b>${actual}/${ultimo}</b> · ${queda > 0 ? duracion(queda) : 'por terminar'}`;
+      txt.title = `Loop ${actual} de 0–${ultimo}` + (real ? ` · empezó ${fechaHora(m.loopTs)} (mensaje de la terminal)` : ' (calculado por tiempo)') +
+        `\n${queda > 0 ? 'Quedan ' + duracion(queda) + ' de este loop' : 'Ya pasaron 8 h: esperando el siguiente "Execution"'}\nTotal restante aprox.: ${duracion(Math.max(0, fin - Date.now()))} · termina ${fechaHora(fin)}`;
+      if (dentro > MS_LOOP) dentro = MS_LOOP;
       Array.from(segs).forEach((s, k) => {
         if (k < actual) { s.className = 'hecho'; s.style.removeProperty('--p'); }
         else if (k === actual) { s.className = 'actual'; s.style.setProperty('--p', (dentro / MS_LOOP * 100).toFixed(2) + '%'); }
@@ -1936,6 +2002,81 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
     }
     setInterval(() => { for (const k of Object.keys(corridas)) pintarLoops(+k); }, 1000);
 
+    /* ---------- Monitor de la salida de cada terminal ----------
+       Lo manda el proceso principal (monitor_slots.js) cada vez que cambia algo. */
+    // El monitor pertenece a la corrida actual si empezó después de lanzar el slot
+    function monitorDeCorrida(i) {
+      const m = monitor[i], c = corridas[i];
+      if (!m || !c) return false;
+      const desde = m.ejecuciones && m.ejecuciones.length ? m.ejecuciones[0].ts : (m.error ? m.error.ts : m.cambio || 0);
+      return desde >= c.inicio - 120000;
+    }
+    function estadoVisible(i) {
+      const m = monitor[i];
+      if (slotStates[i] === 'synced' && corridas[i] && m && monitorDeCorrida(i) && (m.estado === 'slot' || m.estado === 'sistema')) return 'error';
+      return slotStates[i];
+    }
+    function recibirMonitor(i, m, inicial) {
+      const antes = monitor[i];
+      if (!m) { delete monitor[i]; return; }
+      monitor[i] = m;
+      const c = corridas[i];
+      if (!c || !monitorDeCorrida(i)) return;
+      const total = totalLoops(c.loops);
+      const nuevoError = (m.estado === 'slot' || m.estado === 'sistema') && m.error &&
+        !(antes && antes.estado === m.estado && antes.error && antes.error.ts === m.error.ts && antes.error.linea === m.error.linea);
+      if (m.loop !== null && (!antes || antes.loop !== m.loop) && m.estado === 'corriendo') {
+        if (!inicial) tele(`Slot ${pad(i)}: inició el loop <b>${m.loop}/${c.loops}</b>.`, 'ok');
+        guardarRegistro({ id: c.hid, loopReal: m.loop, loopRealTs: m.loopTs });
+      }
+      if (m.estado === 'corriendo' && antes && (antes.estado === 'slot' || antes.estado === 'sistema')) {
+        tele(`Slot ${pad(i)}: se recuperó, empezó el loop ${m.loop}.`, 'ok');
+        guardarRegistro({ id: c.hid, estado: 'corriendo', incidentes: m.incidentes });
+      }
+      if (nuevoError) {
+        const sis = m.estado === 'sistema';
+        guardarRegistro({ id: c.hid, estado: m.exit !== null && m.exit !== 0 ? 'caido' : 'corriendo', incidentes: m.incidentes, ultimoError: m.error.linea,
+          ...(m.exit !== null && m.exit !== 0 ? { salida: m.exitTs, motivo: (sis ? 'Sistema caído: ' : 'Slot caído: ') + m.error.linea, loopAlcanzado: m.loop ?? 0, horasCorridas: +(((m.exitTs || Date.now()) - c.inicio) / 3600000).toFixed(2) } : {}) });
+        if (!inicial) {
+          tele(`Slot ${pad(i)}: <b>${sis ? 'SISTEMA CAÍDO' : 'SLOT CAÍDO'}</b> · <code>${escapar(m.error.linea.slice(0, 140))}</code>`, 'err');
+          if (!sis) {
+            mostrarToast({ titulo: `Slot ${pad(i)} caído`, msg: m.error.linea.slice(0, 160), tipo: 'err', autoOcultar: 20000 });
+            try { new Notification('ORT Engine · Slot ' + pad(i) + ' caído', { body: m.error.linea.slice(0, 180) }); } catch (e) {}
+            notificar('detenido', { title: `Slot ${pad(i)} · CAÍDO`, message: `${c.serial} · P/N ${c.pn}\nLoop ${m.loop ?? 0} de ${c.loops}\n${m.error.linea.slice(0, 300)}`, tags: ['rotating_light'], priority: 5 });
+          }
+        }
+      }
+      // el script terminó con error sin mensaje nuevo (por ejemplo después de un error ya reportado)
+      if (m.exit !== null && m.exit !== 0 && (!antes || antes.exit === null) && !nuevoError) {
+        guardarRegistro({ id: c.hid, estado: 'caido', salida: m.exitTs, motivo: `${m.estado === 'sistema' ? 'Sistema caído' : 'Slot caído'}: ${m.error ? m.error.linea : 'código ' + m.exit}`, loopAlcanzado: m.loop ?? 0, incidentes: m.incidentes, horasCorridas: +((m.exitTs - c.inicio) / 3600000).toFixed(2) });
+        if (!inicial) tele(`Slot ${pad(i)}: el script terminó con código ${m.exit}.`, 'err');
+      }
+      pintarLoops(i);
+      pintarSistema(inicial);
+    }
+    // Aviso general cuando el servicio de la PC (8090) no responde
+    let sistemaAvisado = false, sistemaOculto = false;
+    function pintarSistema(inicial) {
+      const lista = [];
+      for (let i = 1; i <= 16; i++) { const m = monitor[i]; if (corridas[i] && m && m.estado === 'sistema' && monitorDeCorrida(i)) lista.push(i); }
+      const banda = document.getElementById('sistema-caido');
+      if (!lista.length) { banda.hidden = true; if (sistemaAvisado && !inicial) tele('El sistema se recuperó.', 'ok'); sistemaAvisado = false; sistemaOculto = false; return; }
+      const prim = monitor[lista[0]].error;
+      document.getElementById('sc-slots').textContent = lista.length === 1 ? `Slot ${pad(lista[0])}` : `Slots ${lista.map(pad).join(', ')}`;
+      document.getElementById('sc-linea').textContent = prim ? prim.linea : '';
+      document.getElementById('sc-desde').textContent = prim ? 'desde ' + new Date(prim.ts).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: false }) : '';
+      banda.hidden = sistemaOculto;
+      if (!sistemaAvisado) {
+        sistemaAvisado = true;
+        if (!inicial) {
+          tele(`<b>SISTEMA CAÍDO</b>: ${escapar(prim ? prim.linea.slice(0, 140) : '')}`, 'err');
+          try { new Notification('ORT Engine · SISTEMA CAÍDO', { body: (prim ? prim.linea : '').slice(0, 180) }); } catch (e) {}
+          notificar('detenido', { title: 'SISTEMA CAÍDO', message: `${lista.length === 1 ? 'Slot ' + pad(lista[0]) : 'Slots ' + lista.map(pad).join(', ')}\n${prim ? prim.linea.slice(0, 300) : ''}`, tags: ['sos'], priority: 5 });
+        }
+      }
+    }
+    ipcRenderer.on('slot:monitor', (_e, d) => { if (d && d.slot) recibirMonitor(d.slot, d.estado, false); });
+
     // Guarda cómo quedó un slot cuya terminal ya no está abierta
     function fichaDeCorrida(i, c, extra = {}) {
       const serial = (c && c.serial) || extra.serial || '—';
@@ -1943,7 +2084,11 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
       let status = 'Cerrada', detalle = '';
       if (c) {
         const total = totalLoops(c.loops), t = Date.now() - c.inicio;
-        if (t >= total * MS_LOOP) { status = 'Completado'; detalle = `✓ Completó ${total} ${total === 1 ? 'loop' : 'loops'} · ${total * HORAS_POR_LOOP} h`; }
+        const m = monitorDeCorrida(i) ? monitor[i] : null;
+        if (m && m.estado === 'terminado' && m.exit === 0) { status = 'Completado'; detalle = `✓ Completó ${total} ${total === 1 ? 'loop' : 'loops'}`; }
+        else if (m && (m.estado === 'slot' || m.estado === 'sistema')) { status = 'Caído'; detalle = `⚠ ${m.estado === 'sistema' ? 'Sistema caído' : 'Slot caído'} en loop ${m.loop ?? 0}/${c.loops}`; }
+        else if (m && m.loop !== null) detalle = `Llegó al loop ${m.loop}/${c.loops} · ${(t / 3600000).toFixed(1)} h`;
+        else if (!m && t >= total * MS_LOOP) { status = 'Completado'; detalle = `✓ Completó ${total} ${total === 1 ? 'loop' : 'loops'} · ${total * HORAS_POR_LOOP} h`; }
         else detalle = `Llegó al loop ${Math.min(total - 1, Math.floor(t / MS_LOOP))}/${c.loops} · ${(t / 3600000).toFixed(1)} h`;
       }
       ponerFicha(i, { estado: 'cerrada', serial, pn, status, detalle, loops: c ? c.loops : undefined });
@@ -1985,6 +2130,7 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
     (async () => {
       let vivas = [];
       try { vivas = await ipcRenderer.invoke('terminal:vivas'); } catch (e) {}
+      try { const todos = await ipcRenderer.invoke('slot:monitor-todos'); if (todos) for (const [k, m] of Object.entries(todos)) monitor[+k] = m; } catch (e) {}
       const set = new Set(Array.isArray(vivas) ? vivas : []);
       for (const k of Object.keys(corridas)) {
         const i = +k, c = corridas[k];
@@ -2014,6 +2160,7 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
       appLista = true;
       for (let i = 1; i <= 16; i++) pintarLoops(i);
       for (let i = 1; i <= 16; i++) if (!corridas[i] && fichas[i]) pintarFicha(i);
+      for (const k of Object.keys(monitor)) if (corridas[k]) recibirMonitor(+k, monitor[k], true);
     })();
 
     /* ---------- Notificaciones al celular (ntfy) ---------- */
@@ -2102,7 +2249,7 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
     const fmtHora = (ts) => ts ? new Date(ts).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: false }) : '—';
     const fmtCompleta = (ts) => ts ? new Date(ts).toLocaleString('es-MX', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }) : '—';
     const fmtISO = (ts) => { if (!ts) return ''; const d = new Date(ts), p = (n) => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`; };
-    const ESTADOS = { corriendo: 'Corriendo', completado: 'Completado', detenido: 'Detenido' };
+    const ESTADOS = { corriendo: 'Corriendo', completado: 'Completado', detenido: 'Detenido', caido: 'Caído' };
 
     function avance(r) {
       const plan = (r.horasPlan || 0) * 3600000;
@@ -2137,14 +2284,16 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
         ['Fin estimado', fmtCompleta(r.finEstimado)],
         ['Salida', r.salida ? fmtCompleta(r.salida) : 'Sigue corriendo'],
         ['Loops', `0 a ${r.loops} (${r.totalLoops} loops · ${r.horasPlan} h)`],
-        ['Loop alcanzado', r.estado === 'corriendo' ? `${Math.min(r.totalLoops - 1, Math.floor(a.horas / HORAS_POR_LOOP))} (en curso)` : (r.loopAlcanzado !== undefined ? `${r.loopAlcanzado} de ${r.loops}` : '—')],
+        ['Loop alcanzado', r.estado === 'corriendo' ? (r.loopReal !== undefined ? `${r.loopReal} (en curso, según la terminal)` : `${Math.min(r.totalLoops - 1, Math.floor(a.horas / HORAS_POR_LOOP))} (en curso)`) : (r.loopAlcanzado !== undefined ? `${r.loopAlcanzado} de ${r.loops}` : '—')],
         ['Tiempo corrido', `${a.horas.toFixed(1)} h de ${r.horasPlan} h (${Math.round(a.pct)}%)`],
         ['Motivo de salida', r.motivo || '—'],
         ['PC / usuario', [r.pc, r.usuario].filter(Boolean).join(' · ') || '—'],
         ['Versión de la app', r.versionApp ? 'v' + r.versionApp : '—']
       ];
+      const inc = Array.isArray(r.incidentes) && r.incidentes.length
+        ? `<div class="ancho"><dt>Errores detectados en la terminal (${r.incidentes.length})</dt><dd>${r.incidentes.map((x) => `<div class="hd-inc ${x.tipo}"><b>${x.tipo === 'sistema' ? 'Sistema' : 'Slot'}</b> · ${fmtCompleta(x.ts)}${x.loop !== null && x.loop !== undefined ? ' · loop ' + x.loop : ''}<code>${escapar(x.linea)}</code></div>`).join('')}</dd></div>` : '';
       return `<dl class="hd-grid">${campos.map(([k, v]) => `<div><dt>${k}</dt><dd>${escapar(v)}</dd></div>`).join('')}
-        <div class="ancho"><dt>Comando</dt><dd><code>${escapar(r.comando || '—')}</code></dd></div></dl>`;
+        ${inc}<div class="ancho"><dt>Comando</dt><dd><code>${escapar(r.comando || '—')}</code></dd></div></dl>`;
     }
 
     function pintarHistorial() {
@@ -2154,11 +2303,11 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
       const n = (e) => todos.filter((r) => r.estado === e).length;
       document.getElementById('hist-resumen').innerHTML =
         `<span>Mostrando <b>${lista.length}</b> de <b>${todos.length}</b></span>` +
-        `<span>Corriendo: <b>${n('corriendo')}</b></span><span>Completados: <b>${n('completado')}</b></span><span>Detenidos: <b>${n('detenido')}</b></span>`;
+        `<span>Corriendo: <b>${n('corriendo')}</b></span><span>Completados: <b>${n('completado')}</b></span><span>Detenidos: <b>${n('detenido')}</b></span><span>Caídos: <b>${n('caido')}</b></span>`;
 
       body.innerHTML = lista.map((r) => {
         const a = avance(r);
-        const cls = r.estado === 'completado' ? 'ok' : r.estado === 'detenido' ? 'stop' : '';
+        const cls = r.estado === 'completado' ? 'ok' : r.estado === 'detenido' ? 'stop' : r.estado === 'caido' ? 'caido' : '';
         const fila = `<tr class="fila${histAbierto === r.id ? ' abierta' : ''}" data-id="${escapar(r.id)}">
           <td>${fmtHora(r.entrada)}<span class="t-sub">${fmtFecha(r.entrada)}</span></td>
           <td><span class="t-slot">${pad(r.slot)}</span></td>
@@ -2214,7 +2363,7 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
         ['Entrada', (r) => fmtISO(r.entrada)], ['Slot', (r) => r.slot], ['Serial', (r) => r.serial], ['Numero de parte', (r) => r.pn],
         ['Estado', (r) => ESTADOS[r.estado] || r.estado], ['Loops (0 a N)', (r) => r.loops], ['Total loops', (r) => r.totalLoops],
         ['Horas plan', (r) => r.horasPlan], ['Horas corridas', (r) => avance(r).horas.toFixed(2)], ['Avance %', (r) => Math.round(avance(r).pct)],
-        ['Loop alcanzado', (r) => r.loopAlcanzado ?? ''], ['Terminal lanzada', (r) => fmtISO(r.lanzado)], ['Fin estimado', (r) => fmtISO(r.finEstimado)],
+        ['Loop alcanzado', (r) => r.loopAlcanzado ?? r.loopReal ?? ''], ['Errores detectados', (r) => (r.incidentes || []).map((x) => `[${x.tipo}] ${x.linea}`).join(' | ')], ['Terminal lanzada', (r) => fmtISO(r.lanzado)], ['Fin estimado', (r) => fmtISO(r.finEstimado)],
         ['Salida', (r) => fmtISO(r.salida)], ['Motivo', (r) => r.motivo || ''], ['Lectura (s)', (r) => r.lecturaSeg ?? ''], ['Intentos de lectura', (r) => r.intentos ?? ''],
         ['PC', (r) => r.pc || ''], ['Usuario', (r) => r.usuario || ''], ['Version app', (r) => r.versionApp || ''], ['Comando', (r) => r.comando || '']
       ];

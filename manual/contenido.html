@@ -117,6 +117,8 @@ sudo apt install ./ort-engine_*_amd64.deb</pre>
       <tr><td><span class="mini activo">Loop 3/7</span></td><td>Activo (verde)</td><td>La unidad tiene serial, su terminal está abierta y la regresión está corriendo.</td></tr>
       <tr><td><span class="mini activo">✓ Completado</span></td><td>Completado</td><td>Ya pasaron todas las horas de sus loops. La terminal sigue abierta para revisar el resultado.</td></tr>
       <tr><td><span class="mini libre">Cerrada</span></td><td>Cerrada</td><td>Se cerró la terminal. La tarjeta <b>conserva</b> el serial, P/N y hasta qué loop llegó.</td></tr>
+      <tr><td><span class="mini error">⚠ Slot caído</span></td><td>Caído</td><td>La terminal reportó un error de la unidad (por ejemplo <i>Connection refused</i> o un <i>Traceback</i>). Ver capítulo <a href="#m-caidos">Slot caído y sistema caído</a>.</td></tr>
+      <tr><td><span class="mini error">⚠ Sistema caído</span></td><td>Caído</td><td>Falló el servicio de pruebas de la PC (puerto 8090). Sale además una banda roja arriba.</td></tr>
       <tr><td><span class="mini error">Sin script</span></td><td>Error</td><td>No se encontró <code>read_eeprom_ghostfish.py</code>.</td></tr>
       <tr><td><span class="mini error">Interrumpido</span></td><td>Error</td><td>Se cerró la app mientras el slot leía. Vuelve a lanzarlo.</td></tr>
     </tbody>
@@ -159,12 +161,34 @@ sudo apt install ./ort-engine_*_amd64.deb</pre>
     <li>Los loops <b>se guardan solos</b> y se recuerdan al cerrar y abrir la app.</li>
     <li>Cambiar los loops <b>no afecta</b> a una unidad que ya está corriendo: se usan en el siguiente lanzamiento.</li>
   </ul>
-  <h3>El contador</h3>
-  <p>Mientras corre, la tarjeta dice por ejemplo <b>Loop 3/7 · 1h 24m</b>. Si <b>pasas el mouse</b> encima, te dice el tiempo total que falta y <b>a qué hora termina</b>. Al terminar todos los loops, la tarjeta dice <b>✓ Completado</b> y te avisa con una notificación en la PC (y al celular, si lo tienes activado).</p>
+  <h3>El contador va con la terminal</h3>
+  <p>La app lee en vivo lo que imprime la terminal de cada slot. Cada vez que aparece <code>Execution N started successfully</code>, el contador pasa al <b>loop N</b> y empieza a contar sus 8 horas desde ese momento. Así el contador va con la prueba real y no solo con el reloj. En la terminal ves exactamente lo mismo que antes.</p>
+  <p>Mientras corre, la tarjeta dice por ejemplo <b>Loop 3/7 · 1h 24m</b>. Si <b>pasas el mouse</b> encima, te dice el tiempo total que falta y <b>a qué hora termina</b>. Cuando el script termina sin error, la tarjeta dice <b>✓ Completado</b> y te avisa con una notificación en la PC (y al celular, si lo tienes activado).</p>
+</section>
+
+<section id="m-caidos" data-titulo="Slot caído y sistema caído">
+  <h2><span class="num">8</span> Slot caído y sistema caído</h2>
+  <p>Si la terminal de un slot imprime un error, la app lo detecta al momento y te avisa.</p>
+  <figure><img src="img/23-caidos.webp" width="1440" height="245" alt="Sistema caído y slot caído"><figcaption>Slot 02 con <b>Sistema caído</b> (banda roja arriba) y Slot 03 con <b>Slot caído</b>.</figcaption></figure>
+  <table class="tabla">
+    <thead><tr><th>Aviso</th><th>Cuándo sale</th><th>Qué revisar</th></tr></thead>
+    <tbody>
+      <tr><td><b>⚠ Sistema caído</b></td><td>Un error que menciona el puerto <b>8090</b>, <code>localhost</code> o <code>127.0.0.1</code>, por ejemplo <i>8090 failed</i> o <i>Connection refused</i> al servicio. Es el servicio de pruebas de <b>la PC</b>, así que puede afectar a todos los slots.</td><td>Que el servicio de <code>127.0.0.1:8090/open_test</code> esté arriba (abre esa página en Chrome).</td></tr>
+      <tr><td><b>⚠ Slot caído</b></td><td>Cualquier otro error: <i>refused</i>, <i>Traceback</i>, <i>ERROR</i>, <i>FAIL</i>, <i>timeout</i>, <i>unreachable</i>… o que el script termine con un código distinto de 0.</td><td>Esa unidad: cable, que esté encendida y la salida de su terminal (⚙ → Ir a la terminal).</td></tr>
+    </tbody>
+  </table>
+  <ul>
+    <li>La tarjeta se pone <b>roja</b> y dice en qué loop cayó. Pasa el mouse para ver la <b>línea exacta</b> del error y la hora.</li>
+    <li>Llega un aviso a la PC y, si los tienes activados, <b>al celular</b> (<i>Slot 05 · CAÍDO</i> o <i>SISTEMA CAÍDO</i>).</li>
+    <li>El filtro <b>Error</b> los cuenta, para encontrarlos rápido.</li>
+    <li>Si después la terminal vuelve a imprimir <code>Execution N started successfully</code>, el slot <b>se recupera solo</b> y Actividad lo anota.</li>
+    <li>Cada error queda en el <a href="#m-historial">Historial</a> (detalle → <i>Errores detectados en la terminal</i>) y en el Excel. Si el script terminó por el error, el registro queda como <b>Caído</b>.</li>
+  </ul>
+  <div class="nota">Líneas como <i>0 errors</i> o <i>failed: 0</i> <b>no</b> se toman como falla.</div>
 </section>
 
 <section id="m-engrane" data-titulo="Menú del engrane">
-  <h2><span class="num">8</span> Menú del engrane ⚙</h2>
+  <h2><span class="num">9</span> Menú del engrane ⚙</h2>
   <figure class="mitad"><img src="img/06-engrane.webp" width="831" height="227" alt="Menú del engrane"><figcaption>El engrane de cada slot abre este menú.</figcaption></figure>
   <table class="tabla">
     <tbody>
@@ -177,7 +201,7 @@ sudo apt install ./ort-engine_*_amd64.deb</pre>
 </section>
 
 <section id="m-reiniciar" data-titulo="Reiniciar slots">
-  <h2><span class="num">9</span> Reiniciar slots</h2>
+  <h2><span class="num">10</span> Reiniciar slots</h2>
   <p><b>Reiniciar</b> deja uno, varios o todos los slots en <b>Libre</b> dentro de la app. Está protegido con <b>contraseña</b> (pídesela al responsable de la línea).</p>
   <div class="dos-col">
     <figure><img src="img/09-reiniciar-todos.webp" width="726" height="588" alt="Reiniciar todos"><figcaption><b>Todos</b>: reinicia los 16.</figcaption></figure>
@@ -194,13 +218,13 @@ sudo apt install ./ort-engine_*_amd64.deb</pre>
 </section>
 
 <section id="m-filtros" data-titulo="Filtros">
-  <h2><span class="num">10</span> Filtros</h2>
+  <h2><span class="num">11</span> Filtros</h2>
   <figure><img src="img/04-filtros.webp" width="863" height="60" alt="Filtros"></figure>
   <p>Arriba de los slots. Cada filtro dice cuántos slots hay en ese estado. Al tocar uno, los slots que no coinciden se ven más tenues para que encuentres rápido, por ejemplo, los que tienen error. <b>Todos</b> regresa a la vista normal.</p>
 </section>
 
 <section id="m-historial" data-titulo="Historial">
-  <h2><span class="num">11</span> Historial</h2>
+  <h2><span class="num">12</span> Historial</h2>
   <p>Registra <b>cada unidad que entra a un slot</b>: serial, P/N, slot, hora de entrada, loops, avance, hora de salida y por qué salió.</p>
   <figure><img src="img/11-historial.webp" width="1500" height="1104" alt="Historial"></figure>
   <ul>
@@ -216,7 +240,7 @@ sudo apt install ./ort-engine_*_amd64.deb</pre>
 </section>
 
 <section id="m-ntfy" data-titulo="Notificaciones al celular">
-  <h2><span class="num">12</span> Notificaciones al celular 🔔</h2>
+  <h2><span class="num">13</span> Notificaciones al celular 🔔</h2>
   <p>ORT Engine puede mandarte avisos a la app gratuita <b>ntfy</b> (Android y iPhone).</p>
   <div class="dos-col">
     <figure><img src="img/13-ntfy.webp" width="816" height="909" alt="Notificaciones al celular"></figure>
@@ -236,7 +260,7 @@ sudo apt install ./ort-engine_*_amd64.deb</pre>
 </section>
 
 <section id="m-actividad" data-titulo="Actividad y salida de terminal">
-  <h2><span class="num">13</span> Actividad y salida de terminal</h2>
+  <h2><span class="num">14</span> Actividad y salida de terminal</h2>
   <div class="dos-col">
     <figure><img src="img/14-actividad.webp" width="503" height="780" alt="Actividad"><figcaption>Actividad.</figcaption></figure>
     <div>
@@ -248,7 +272,7 @@ sudo apt install ./ort-engine_*_amd64.deb</pre>
 </section>
 
 <section id="m-conserva" data-titulo="Qué se conserva al cerrar la app">
-  <h2><span class="num">14</span> Qué se conserva al cerrar la app</h2>
+  <h2><span class="num">15</span> Qué se conserva al cerrar la app</h2>
   <p>Puedes cerrar ORT Engine sin miedo: <b>las terminales siguen corriendo</b> y al volver a abrir la app todo aparece como lo dejaste.</p>
   <table class="tabla">
     <thead><tr><th>Qué</th><th>Al volver a abrir la app…</th></tr></thead>
@@ -267,7 +291,7 @@ sudo apt install ./ort-engine_*_amd64.deb</pre>
 </section>
 
 <section id="m-actualizaciones" data-titulo="Actualizaciones">
-  <h2><span class="num">15</span> Actualizaciones</h2>
+  <h2><span class="num">16</span> Actualizaciones</h2>
   <figure class="mitad"><img src="img/16-actualizacion.webp" width="618" height="207" alt="Aviso de actualización"></figure>
   <ol class="pasos">
     <li>Al abrirse, y luego cada hora, la app revisa si hay una versión nueva. También puedes revisar con el botón <b>⟳</b> de arriba.</li>
@@ -279,13 +303,13 @@ sudo apt install ./ort-engine_*_amd64.deb</pre>
 </section>
 
 <section id="m-oscuro" data-titulo="Modo oscuro">
-  <h2><span class="num">16</span> Modo oscuro</h2>
+  <h2><span class="num">17</span> Modo oscuro</h2>
   <figure><img src="img/20-oscuro.webp" width="1500" height="938" alt="Modo oscuro"></figure>
   <p>El botón <b>☾ / ☀</b> de arriba a la derecha cambia entre modo claro y oscuro. La app recuerda tu elección.</p>
 </section>
 
 <section id="m-manual" data-titulo="Este manual dentro de la app">
-  <h2><span class="num">17</span> Este manual dentro de la app</h2>
+  <h2><span class="num">18</span> Este manual dentro de la app</h2>
   <figure><img src="img/21-manual-app.webp" width="1500" height="938" alt="Manual dentro de la app"></figure>
   <ul>
     <li>Ábrelo con el botón <b>📖</b> de arriba a la derecha o con la tecla <kbd>F1</kbd>.</li>
@@ -297,10 +321,12 @@ sudo apt install ./ort-engine_*_amd64.deb</pre>
 </section>
 
 <section id="m-problemas" data-titulo="Solución de problemas">
-  <h2><span class="num">18</span> Solución de problemas</h2>
+  <h2><span class="num">19</span> Solución de problemas</h2>
   <table class="tabla problemas">
     <thead><tr><th>Lo que pasa</th><th>Qué hacer</th></tr></thead>
     <tbody>
+      <tr><td>Sale <b>Sistema caído</b></td><td>El servicio de pruebas de la PC (8090) no responde. Ábrelo en Chrome (<code>127.0.0.1:8090/open_test</code>) y reinícialo si hace falta. Los slots se recuperan solos cuando vuelve a arrancar un loop.</td></tr>
+      <tr><td>Sale <b>Slot caído</b></td><td>Pasa el mouse sobre la tarjeta para ver el error. Revisa la unidad y su terminal. Si el script ya terminó, vuelve a lanzar el slot.</td></tr>
       <tr><td>El slot dice <b>Sin script</b></td><td>Falta <code>read_eeprom_ghostfish.py</code>. Cópialo a tu Escritorio, Documentos o <code>~/scripts</code> y vuelve a lanzar el slot.</td></tr>
       <tr><td>El slot se queda en <b>Reintento 2, 3, 4…</b></td><td>La unidad no responde. Revisa que esté bien conectada y encendida. Mira la <i>Salida de terminal</i> para ver el error del script.</td></tr>
       <tr><td><b>Ir a la terminal</b> no hace nada</td><td>Instala wmctrl (<code>sudo apt install wmctrl</code>) y entra a Ubuntu con <b>"Ubuntu en Xorg"</b>. En Wayland no se puede traer ventanas al frente.</td></tr>
@@ -315,7 +341,7 @@ sudo apt install ./ort-engine_*_amd64.deb</pre>
 </section>
 
 <section id="m-rapida" data-titulo="Referencia rápida">
-  <h2><span class="num">19</span> Referencia rápida</h2>
+  <h2><span class="num">20</span> Referencia rápida</h2>
   <div class="rapida">
     <div><b>Leer y lanzar un slot</b><span>Clic en la tarjeta</span></div>
     <div><b>Lanzar todos los libres</b><span>Botón <i>Lanzar todos</i> (uno cada 5 s)</span></div>
@@ -331,5 +357,7 @@ sudo apt install ./ort-engine_*_amd64.deb</pre>
     <div><b>Asistente de bienvenida</b><span>Clic en el logo</span></div>
     <div><b>Este manual</b><span>Botón 📖 de arriba</span></div>
     <div><b>1 loop</b><span>8 horas · 7 = loops 0 a 7 = 64 h</span></div>
+    <div><b>Loop real</b><span>Lo marca "Execution N started successfully"</span></div>
+    <div><b>Tarjeta roja ⚠</b><span>Slot caído o sistema caído: mouse encima = error</span></div>
   </div>
 </section>

@@ -168,16 +168,31 @@ try {
 } catch (e) {}
 
 const pidFile = (clave) => path.join(DIR_TMP, `${clave}.pid`);
+
+/* ---------- Vigilar la salida de cada slot (loops reales y errores) ---------- */
+const monitorSlots = require('./monitor_slots.js');
+monitorSlots.configurar({
+  dir: DIR_TMP,
+  avisar: (slot, estado) => { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('slot:monitor', { slot, estado }); }
+});
+monitorSlots.iniciar();
+ipcMain.handle('slot:monitor-todos', () => monitorSlots.todos());
 const comillas = (s) => `'${String(s).replace(/'/g, `'\\''`)}'`;
 
-function abrirTerminal(clave, titulo, comando) {
+// slotMonitor: número de slot si su salida se debe vigilar (loops y errores)
+function abrirTerminal(clave, titulo, comando, slotMonitor) {
   const homeDir = app.getPath('home');
   try { fs.unlinkSync(pidFile(clave)); } catch (e) {}
+  let ejecutar = comando;
+  if (slotMonitor) {
+    monitorSlots.prepararCorrida(slotMonitor);
+    ejecutar = monitorSlots.envolver(slotMonitor, comando, comillas);
+  }
   const script = [
     `printf '\\033]0;%s\\007' ${comillas(titulo)}`,
     `echo $$ > ${comillas(pidFile(clave))}`,
     `echo "\\$ ${comando.replace(/"/g, '\\"')}"`,
-    comando,
+    ejecutar,
     `export ORT_TITLE=${comillas(titulo)}`,
     `exec bash --rcfile ${comillas(RC_FILE)}`
   ].join('; ');
@@ -259,7 +274,7 @@ ipcMain.handle('read-eeprom', async (event, slotNum, loopsNum = 7, launchTermina
     const staticValue = 1200;
     const regressionCommandStr = `${regressionScript} ${slotNum} ${detectedPartNumber || '0000000'} ${detectedSerial || 'FLG-0000'} ${loopsNum} ${staticValue}`;
 
-    abrirTerminal(claveSlot(slotNum), tituloSlot(slotNum), regressionCommandStr);
+    abrirTerminal(claveSlot(slotNum), tituloSlot(slotNum), regressionCommandStr, slotNum);
 
     return {
       slot: slotNum,
