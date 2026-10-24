@@ -101,9 +101,11 @@ const NOVEDADES = {
   '1.2.9': [
     'Detecta las consolas de slots que ya están corriendo y recupera serial, P/N y loops',
     'Calcula en qué loop va cada consola recuperada',
-    'Notificación al terminar de descargar y al instalar una actualización'
+    'Notificación al terminar de descargar y al instalar una actualización',
+    'La app se siente más fluida: ya no redibuja la pantalla cada segundo sin necesidad'
   ]
 };
+NOVEDADES['1.3.0'] = NOVEDADES['1.2.9'];   // por si se publica como 1.3.0
 
 function avisarSiSeActualizo() {
   const actual = app.getVersion();

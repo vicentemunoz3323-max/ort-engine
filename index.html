@@ -443,7 +443,7 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
 
 .card, .bottom-console, .modal-content, .toast { border: 1px solid var(--contorno); }
 .card, .bottom-console { box-shadow: 0 1px 2px rgba(0,0,0,.06); }
-.slot-card { border: 1px solid var(--contorno-suave); }
+.slot-card { border: 1px solid var(--contorno-suave); contain: layout style; }
 .slot-card:hover { border-color: var(--contorno); box-shadow: 0 2px 8px rgba(0,0,0,.08); }
 .slot-config, .term-menu { border: 1px solid var(--contorno); }
 .slot-config-row { border: 1px solid var(--contorno-suave); }
@@ -1190,7 +1190,7 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
 
     function logToConsole(text) {
       if (consoleOutput.textContent === 'Esperando ejecución…') consoleOutput.textContent = '';
-      consoleOutput.textContent += text;
+      consoleOutput.append(text);
       consoleOutput.scrollTop = consoleOutput.scrollHeight;
       avisoPanelConsola(text);
     }
@@ -1319,6 +1319,17 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
       telemetryScreen.appendChild(sep);
     })();
 
+    // Solo se toca la pantalla si el valor cambió (reescribir lo mismo cada segundo hace que
+    // la ventana se redibuje sin necesidad y el cursor se siente lento)
+    function ponerTexto(el, v) { v = String(v); if (el && el.textContent !== v) el.textContent = v; }
+    function ponerHTML(el, v) { if (el && el.innerHTML !== v) el.innerHTML = v; }
+    function ponerTitulo(el, v) { if (el && el.title !== v) el.title = v; }
+    function ponerSeg(sg, clase, p) {
+      if (sg.className !== clase) sg.className = clase;
+      if (p === undefined) { if (sg.style.getPropertyValue('--p')) sg.style.removeProperty('--p'); }
+      else if (sg.style.getPropertyValue('--p') !== p) sg.style.setProperty('--p', p);
+    }
+
     function escapar(s) {
       return String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
     }
@@ -1332,11 +1343,11 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
         else if (e === 'running') run++;
         else if (e === 'error') err++;
       }
-      document.getElementById('c-all').textContent = 16;
-      document.getElementById('c-ok').textContent = ok;
-      document.getElementById('c-run').textContent = run;
-      document.getElementById('c-err').textContent = err;
-      document.getElementById('c-idle').textContent = 16 - ok - run - err;
+      ponerTexto(document.getElementById('c-all'), 16);
+      ponerTexto(document.getElementById('c-ok'), ok);
+      ponerTexto(document.getElementById('c-run'), run);
+      ponerTexto(document.getElementById('c-err'), err);
+      ponerTexto(document.getElementById('c-idle'), 16 - ok - run - err);
       aplicarFiltro();
     }
 
@@ -2073,14 +2084,14 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
 
       card.classList.toggle('corriendo', !!c);
       if (!c && fichas[i] && fichas[i].detalle && fichas[i].estado === 'cerrada' && slotStates[i] === 'idle') {
-        txt.innerHTML = escapar(fichas[i].detalle);
-        for (const s of segs) { s.className = fichas[i].status === 'Completado' ? 'hecho' : ''; s.style.removeProperty('--p'); }
+        ponerHTML(txt, escapar(fichas[i].detalle));
+        for (const s of segs) ponerSeg(s, fichas[i].status === 'Completado' ? 'hecho' : '');
         return;
       }
       if (!c) {
-        txt.innerHTML = `${total} ${total === 1 ? 'loop' : 'loops'} · ${total * HORAS_POR_LOOP} h`;
-        txt.title = `Loops 0 a ${ultimo}, ${HORAS_POR_LOOP} h cada uno`;
-        for (const s of segs) { s.className = ''; s.style.removeProperty('--p'); }
+        ponerHTML(txt, `${total} ${total === 1 ? 'loop' : 'loops'} · ${total * HORAS_POR_LOOP} h`);
+        ponerTitulo(txt, `Loops 0 a ${ultimo}, ${HORAS_POR_LOOP} h cada uno`);
+        for (const s of segs) ponerSeg(s, '');
         return;
       }
 
@@ -2093,18 +2104,18 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
       const statusEl = document.getElementById(`status-${i}`);
       if (real && (m.estado === 'slot' || m.estado === 'sistema')) {
         const n = m.loop === null ? -1 : Math.min(total - 1, m.loop);
-        txt.innerHTML = `<b>⚠ ${m.estado === 'sistema' ? 'Sistema caído' : 'Slot caído'}</b>` + (n >= 0 ? ` · loop ${n}/${ultimo}` : '');
-        txt.title = `${m.error ? m.error.linea : ''}\n${m.error ? 'Desde ' + fechaHora(m.error.ts) : ''}${m.exit !== null ? '\nEl script terminó (código ' + m.exit + ')' : ''}`;
-        if (statusEl && statusEl.textContent !== (m.estado === 'sistema' ? 'Sistema' : 'Caído')) statusEl.textContent = m.estado === 'sistema' ? 'Sistema' : 'Caído';
-        Array.from(segs).forEach((sg, k) => { sg.className = k < n ? 'hecho' : k === n ? 'falla' : ''; sg.style.removeProperty('--p'); });
+        ponerHTML(txt, `<b>⚠ ${m.estado === 'sistema' ? 'Sistema caído' : 'Slot caído'}</b>` + (n >= 0 ? ` · loop ${n}/${ultimo}` : ''));
+        ponerTitulo(txt, `${m.error ? m.error.linea : ''}\n${m.error ? 'Desde ' + fechaHora(m.error.ts) : ''}${m.exit !== null ? '\nEl script terminó (código ' + m.exit + ')' : ''}`);
+        ponerTexto(statusEl, m.estado === 'sistema' ? 'Sistema' : 'Caído');
+        Array.from(segs).forEach((sg, k) => ponerSeg(sg, k < n ? 'hecho' : k === n ? 'falla' : ''));
         card.classList.remove('terminado');
         return;
       }
       if (statusEl && statusEl.textContent !== 'Sync' && slotStates[i] === 'synced') statusEl.textContent = 'Sync';
       if (real && m.estado === 'esperando' && m.exit === null) {
-        txt.innerHTML = 'Iniciando prueba…';
-        txt.title = 'Esperando el primer "Execution 0 started successfully" de la terminal';
-        for (const sg of segs) { sg.className = ''; sg.style.removeProperty('--p'); }
+        ponerHTML(txt, 'Iniciando prueba…');
+        ponerTitulo(txt, 'Esperando el primer "Execution 0 started successfully" de la terminal');
+        for (const sg of segs) ponerSeg(sg, '');
         return;
       }
       let transcurrido = Date.now() - c.inicio;
@@ -2121,9 +2132,9 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
       }
 
       if (terminado) {
-        txt.innerHTML = `<b>✓ Completado</b> · ${total * HORAS_POR_LOOP} h`;
-        txt.title = `Terminó ${fechaHora(fin)}`;
-        for (const s of segs) { s.className = 'hecho'; s.style.removeProperty('--p'); }
+        ponerHTML(txt, `<b>✓ Completado</b> · ${total * HORAS_POR_LOOP} h`);
+        ponerTitulo(txt, `Terminó ${fechaHora(fin)}`);
+        for (const s of segs) ponerSeg(s, 'hecho');
         card.classList.add('terminado');
         if (c.hid && !c.cerradoHist) {
           c.cerradoHist = true; guardarCorridas();
@@ -2145,14 +2156,15 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
 
       card.classList.remove('terminado');
       const queda = MS_LOOP - dentro;
-      txt.innerHTML = `Loop <b>${actual}/${ultimo}</b> · ${queda > 0 ? duracion(queda) : 'por terminar'}`;
-      txt.title = `Loop ${actual} de 0–${ultimo}` + (real ? ` · empezó ${fechaHora(m.loopTs)} (mensaje de la terminal)` : ' (calculado por tiempo)') +
-        `\n${queda > 0 ? 'Quedan ' + duracion(queda) + ' de este loop' : 'Ya pasaron 8 h: esperando el siguiente "Execution"'}\nTotal restante aprox.: ${duracion(Math.max(0, fin - Date.now()))} · termina ${fechaHora(fin)}`;
+      ponerHTML(txt, `Loop <b>${actual}/${ultimo}</b> · ${queda > 0 ? duracion(queda) : 'por terminar'}`);
+      ponerTitulo(txt, `Loop ${actual} de 0–${ultimo}` + (real ? ` · empezó ${fechaHora(m.loopTs)} (mensaje de la terminal)` : ' (calculado por tiempo)') +
+        `\n${queda > 0 ? 'Quedan ' + duracion(queda) + ' de este loop' : 'Ya pasaron 8 h: esperando el siguiente "Execution"'}\nTotal restante aprox.: ${duracion(Math.max(0, fin - Date.now()))} · termina ${fechaHora(fin)}`);
       if (dentro > MS_LOOP) dentro = MS_LOOP;
+      // el avance del loop actual se redondea a 0.1 % (cambia cada ~30 s, no cada segundo)
       Array.from(segs).forEach((s, k) => {
-        if (k < actual) { s.className = 'hecho'; s.style.removeProperty('--p'); }
-        else if (k === actual) { s.className = 'actual'; s.style.setProperty('--p', (dentro / MS_LOOP * 100).toFixed(2) + '%'); }
-        else { s.className = ''; s.style.removeProperty('--p'); }
+        if (k < actual) ponerSeg(s, 'hecho');
+        else if (k === actual) ponerSeg(s, 'actual', (dentro / MS_LOOP * 100).toFixed(1) + '%');
+        else ponerSeg(s, '');
       });
     }
     setInterval(() => { for (const k of Object.keys(corridas)) pintarLoops(+k); }, 1000);
