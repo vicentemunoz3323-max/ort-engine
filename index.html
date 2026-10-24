@@ -569,7 +569,44 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
 .bv-firma svg { width: 12px; height: 12px; fill: #e5383b; animation: latido 1.6s ease-in-out infinite; }
 .brand-logo { cursor: pointer; }
 @media (max-width: 640px) { .bv-feats, .bv-tips { grid-template-columns: 1fr; } .bv-card { padding: 24px 20px 14px; } }
-  </style>
+  
+/* ===== Reiniciar: elegir slots ===== */
+.modal-content.pin { width: 460px; }
+.rs-modo { display: grid; grid-template-columns: 1fr 1fr; gap: 0; margin: 12px 0 10px; padding: 3px; border-radius: 12px; background: var(--surface-high); }
+.rs-op { height: 32px; border: 0; border-radius: 9px; background: transparent; color: var(--on-surface-variant); font: 600 12.5px var(--font); cursor: pointer; transition: background .15s, color .15s, box-shadow .15s; }
+.rs-op[aria-checked="true"] { background: var(--surface); color: var(--on-surface); box-shadow: 0 1px 3px rgba(0,0,0,.15); }
+.rs-elegir[hidden] { display: none; }
+.rs-rapidos { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; margin-bottom: 8px; font-size: 11px; color: var(--on-surface-variant); }
+.rs-rapidos span { margin-right: 2px; }
+.rs-rapidos button { height: 24px; padding: 0 10px; border-radius: 12px; border: 1px solid var(--outline-variant); background: transparent; color: var(--on-surface); font: 500 11px var(--font); cursor: pointer; }
+.rs-rapidos button:hover { background: color-mix(in srgb, var(--on-surface) 6%, transparent); }
+.rs-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.rs-slot { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 1px; padding: 6px 8px 6px 20px; border-radius: 10px; border: 1.5px solid var(--outline-variant); background: var(--surface); color: var(--on-surface); cursor: pointer; text-align: left; transition: border-color .12s, background .12s, transform .08s; min-width: 0; }
+.rs-slot:active { transform: scale(.97); }
+.rs-slot::before { content: ""; position: absolute; left: 8px; top: 11px; width: 7px; height: 7px; border-radius: 50%; background: var(--outline-variant); }
+.rs-slot.uso::before { background: var(--success); }
+.rs-slot.leyendo::before { background: var(--warning); }
+.rs-slot.err::before { background: var(--error); }
+.rs-slot.info::before { background: var(--outline); }
+.rs-slot b { font: 700 12px var(--font); }
+.rs-slot small { max-width: 100%; font: 500 9.5px var(--mono); color: var(--on-surface-variant); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rs-slot.sel { border-color: var(--error); background: color-mix(in srgb, var(--error) 9%, var(--surface)); }
+.rs-slot.sel::after { content: "✓"; position: absolute; right: 7px; top: 5px; font: 800 11px var(--font); color: var(--error); }
+.modal-content.pin #pin-msg { margin: 12px 0 10px; }
+.rs-cerrar { display: flex; align-items: center; gap: 8px; margin: -2px 0 12px; font-size: 12px; color: var(--on-surface); cursor: pointer; }
+.rs-cerrar[hidden] { display: none; }
+.rs-cerrar em { font-style: normal; color: var(--on-surface-variant); }
+.rs-cerrar input { width: 16px; height: 16px; accent-color: var(--error); }
+#rs-ok:disabled { opacity: .45; cursor: not-allowed; box-shadow: none; }
+/* Tarjeta que conserva la información de una unidad que ya no corre */
+.slot-card.con-ficha .slot-serial { opacity: .85; }
+.slot-card.con-ficha .slot-status { background: var(--surface-high); color: var(--on-surface-variant); }
+.slot-card.ficha-ok .slot-status { background: var(--success-container); color: var(--success); }
+.slot-card.ficha-ok .loop-bar i::after { width: 100%; background: var(--success); }
+/* Registro de actividad recuperado */
+.tl.viejo { opacity: .6; }
+.tl-sep { margin: 6px 0; padding: 3px 0; text-align: center; font-size: 10.5px; font-weight: 600; letter-spacing: .02em; color: var(--primary); border-top: 1px dashed var(--outline-variant); border-bottom: 1px dashed var(--outline-variant); }
+</style>
 </head>
 <body>
 
@@ -687,8 +724,23 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
       <div class="pin-icono">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2.5"/><path d="M8 11V7.5a4 4 0 0 1 8 0V11"/></svg>
       </div>
-      <h2 id="pin-title">Reiniciar todos los slots</h2>
+      <h2 id="pin-title">Reiniciar slots</h2>
+      <div class="rs-modo" role="radiogroup" aria-label="Qué reiniciar">
+        <button type="button" class="rs-op" data-modo="todos" role="radio">Todos</button>
+        <button type="button" class="rs-op" data-modo="elegir" role="radio">Elegir slots</button>
+      </div>
+      <div class="rs-elegir" id="rs-elegir">
+        <div class="rs-rapidos">
+          <span>Marcar:</span>
+          <button type="button" data-marcar="todos">Todos</button>
+          <button type="button" data-marcar="ocupados">En uso</button>
+          <button type="button" data-marcar="error">Con error</button>
+          <button type="button" data-marcar="ninguno">Ninguno</button>
+        </div>
+        <div class="rs-grid" id="rs-grid"></div>
+      </div>
       <p id="pin-msg"></p>
+      <label class="rs-cerrar" id="rs-cerrar-wrap"><input type="checkbox" id="rs-cerrar"> <span>Cerrar también sus terminales <em id="rs-cerrar-n"></em></span></label>
       <label class="campo">
         <span>Contraseña</span>
         <input id="pin-input" type="password" autocomplete="off" placeholder="••••••••">
@@ -696,7 +748,7 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
       <div class="pin-error" id="pin-error" role="alert"></div>
       <div class="pin-acciones">
         <button class="btn btn-text ripple" onclick="cerrarPin()">Cancelar</button>
-        <button class="btn btn-peligro-lleno ripple" onclick="confirmarPin()">Reiniciar</button>
+        <button class="btn btn-peligro-lleno ripple" id="rs-ok" onclick="confirmarPin()">Reiniciar</button>
       </div>
     </div>
   </div>
@@ -923,6 +975,15 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
     try { corridas = JSON.parse(localStorage.getItem('ort_corridas') || '{}'); } catch (e) {}
     const pad = (n) => (n < 10 ? '0' + n : '' + n);
 
+    // Lo que muestra cada tarjeta cuando ya no está corriendo (terminal cerrada, error,
+    // lectura interrumpida). Se guarda en la PC y se ve igual al volver a abrir la app,
+    // hasta que reinicies el slot o lo vuelvas a lanzar.
+    let fichas = {};
+    try { fichas = JSON.parse(localStorage.getItem('ort_fichas') || '{}') || {}; } catch (e) { fichas = {}; }
+    function guardarFichas() { try { localStorage.setItem('ort_fichas', JSON.stringify(fichas)); } catch (e) {} }
+    function ponerFicha(i, f) { fichas[i] = { ...f, ts: Date.now() }; guardarFichas(); }
+    function borrarFicha(i) { if (fichas[i]) { delete fichas[i]; guardarFichas(); } }
+
     // Los loops de cada slot se guardan en la PC y se recuerdan al volver a abrir la app
     let loopsGuardados = {};
     try { loopsGuardados = JSON.parse(localStorage.getItem('ort_loops') || '{}'); } catch (e) {}
@@ -933,6 +994,7 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
     const ICONO_TERMINAL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="4" width="19" height="16" rx="3"/><path d="M7 9.5l3 2.5-3 2.5"/><path d="M12.5 15h4.5"/></svg>';
     const ICONO_IR = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6"/><path d="M20 4l-9 9"/><path d="M18 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4"/></svg>';
     const ICONO_CERRAR = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+    const ICONO_REINICIO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>';
     const ICONO_AJUSTE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>';
 
     function logToConsole(text) {
@@ -940,23 +1002,65 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
       consoleOutput.textContent += text;
       consoleOutput.scrollTop = consoleOutput.scrollHeight;
     }
+    // La consola también se guarda en la PC (últimos 30 000 caracteres)
+    (function persistirConsola() {
+      let g = null;
+      try { g = localStorage.getItem('ort_consola'); } catch (e) {}
+      if (g && g.trim()) {
+        consoleOutput.textContent = g + '\n\n── App abierta de nuevo · ' + new Date().toLocaleString('es-MX', { hour12: false }) + ' ──\n';
+        consoleOutput.scrollTop = consoleOutput.scrollHeight;
+      }
+      let ultimo = '';
+      const guardar = () => {
+        let t = consoleOutput.textContent;
+        if (t === ultimo) return;
+        if (t.length > 30000) { t = t.slice(-30000); consoleOutput.textContent = t; }
+        ultimo = t;
+        try { localStorage.setItem('ort_consola', t === 'Esperando ejecución…' ? '' : t); } catch (e) {}
+      };
+      setInterval(guardar, 1500);
+      window.addEventListener('beforeunload', guardar);
+    })();
 
     /* Registro de actividad: cada evento con hora y color según el tipo */
     let eventos = 0;
-    function tele(texto, tipo = 'info') {
+    let actividad = [];      // se guarda en la PC: no se pierde al cerrar la app
+    function pintarTele(hora, texto, tipo, clase) {
       const fila = document.createElement('div');
-      fila.className = 'tl ' + tipo;
+      fila.className = 'tl ' + tipo + (clase ? ' ' + clase : '');
       const t = document.createElement('span');
       t.className = 'tl-t';
-      t.textContent = new Date().toLocaleTimeString('es-MX', { hour12: false });
+      t.textContent = hora;
       const m = document.createElement('span');
       m.innerHTML = texto;
       fila.append(t, m);
       telemetryScreen.appendChild(fila);
       while (telemetryScreen.children.length > 80) telemetryScreen.firstChild.remove();
       telemetryScreen.scrollTop = telemetryScreen.scrollHeight;
-      document.getElementById('tl-count').textContent = (++eventos) + ' eventos';
+      document.getElementById('tl-count').textContent = eventos + ' eventos';
     }
+    function tele(texto, tipo = 'info') {
+      const ahora = new Date();
+      const hora = ahora.toLocaleTimeString('es-MX', { hour12: false });
+      eventos++;
+      actividad.push({ h: hora, d: ahora.toDateString(), x: texto, t: tipo });
+      if (actividad.length > 80) actividad.splice(0, actividad.length - 80);
+      try { localStorage.setItem('ort_actividad', JSON.stringify({ n: eventos, a: actividad })); } catch (e) {}
+      pintarTele(hora, texto, tipo);
+    }
+    (function recuperarActividad() {
+      let g = null;
+      try { g = JSON.parse(localStorage.getItem('ort_actividad') || 'null'); } catch (e) {}
+      if (!g || !Array.isArray(g.a) || !g.a.length) return;
+      actividad = g.a.slice(-80);
+      eventos = +g.n || actividad.length;
+      const hoy = new Date().toDateString();
+      for (const e of actividad) pintarTele(e.d && e.d !== hoy ? new Date(e.d).toLocaleDateString('es-MX', { day: '2-digit', month: 'short' }) + ' ' + e.h.slice(0, 5) : e.h, e.x, e.t, 'viejo');
+      const sep = document.createElement('div');
+      sep.className = 'tl-sep';
+      sep.textContent = 'App abierta de nuevo · ' + new Date().toLocaleString('es-MX', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false });
+      telemetryScreen.appendChild(sep);
+    })();
 
     function escapar(s) {
       return String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -1073,6 +1177,7 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
       const configEl = document.getElementById(`config-${i}`);
 
       terminarCorrida(i, 'Se volvió a lanzar el slot');
+      ponerFicha(i, { estado: 'leyendo' });     // si cierras la app a media lectura, se ve al volver
       ponerClase(card, 'slot-card booting');
       if (configEl) configEl.style.display = 'none';
       statusEl.textContent = 'Boot 0 s';
@@ -1119,6 +1224,7 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
           statusEl.textContent = 'Sin script';
           serialEl.textContent = 'Error';
           slotStates[i] = 'error';
+          ponerFicha(i, { estado: 'error', status: 'Sin script', serial: 'Error' });
           logToConsole(`\n[slot ${i}] ${data.log}`);
           tele(`Slot ${pad(i)}: no se encontró <code>read_eeprom_ghostfish.py</code>.`, 'err');
           return;
@@ -1141,6 +1247,7 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
       serialEl.textContent = data.serial;
       partEl.textContent = data.partNumber;
       slotStates[i] = 'synced';
+      borrarFicha(i);
 
       const assignedLoops = slotLoops[i] !== undefined ? slotLoops[i] : 3;
       logToConsole(`\n[slot ${i}] Serial ${data.serial} · P/N ${data.partNumber} · lanzando con ${assignedLoops} loops…`);
@@ -1186,6 +1293,7 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
         <div class="term-menu" id="tmenu-${i}" style="display:none" onclick="event.stopPropagation()">
           <button class="tm-btn" onclick="irATerminal(${i})">${ICONO_IR}Ir a la terminal</button>
           <button class="tm-btn peligro" onclick="cerrarTerminal(${i})">${ICONO_CERRAR}Cerrar terminal</button>
+          <button class="tm-btn peligro" onclick="reiniciarUnSlot(${i})">${ICONO_REINICIO}Reiniciar slot</button>
           <button class="tm-btn cancelar" onclick="document.getElementById('tmenu-${i}').style.display='none'">Cancelar</button>
         </div>
 
@@ -1201,7 +1309,7 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
       });
       card.addEventListener('click', () => {
         tele(`Slot ${pad(i)}: iniciando lectura.`, 'warn');
-        consoleOutput.textContent = `Iniciando slot ${i}…\n`;
+        logToConsole(`\n\n── Iniciando slot ${i} · ${new Date().toLocaleTimeString('es-MX', { hour12: false })} ──`);
         processSlot(i);
       });
 
@@ -1251,23 +1359,79 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
       const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(txt));
       return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('');
     }
-    function resetAllSlots() {
-      const ocupados = Object.values(slotStates).filter((s) => s === 'running' || s === 'synced').length;
-      document.getElementById('pin-msg').innerHTML = ocupados
-        ? `Hay <b>${ocupados} slot(s) en uso</b>. Se borrará su estado en la app; las terminales que ya están corriendo <b>no se cierran</b>.`
-        : 'Todos los slots volverán a quedar libres.';
+    // Reiniciar: todos, uno solo o los que marques
+    let rsModo = 'todos';
+    const rsSel = new Set();
+    const ocupadoSlot = (i) => slotStates[i] === 'running' || slotStates[i] === 'synced';
+    function rsPintar() {
+      document.querySelectorAll('.rs-op').forEach((b) => b.setAttribute('aria-checked', b.dataset.modo === rsModo ? 'true' : 'false'));
+      document.getElementById('rs-elegir').hidden = rsModo !== 'elegir';
+      const grid = document.getElementById('rs-grid');
+      grid.innerHTML = '';
+      for (let i = 1; i <= 16; i++) {
+        const est = slotStates[i];
+        const serial = (document.getElementById(`serial-${i}`).textContent || '').trim();
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'rs-slot ' + (est === 'synced' ? 'uso' : est === 'running' ? 'leyendo' : est === 'error' ? 'err' : (fichas[i] ? 'info' : 'libre')) + (rsSel.has(i) ? ' sel' : '');
+        b.setAttribute('aria-pressed', rsSel.has(i) ? 'true' : 'false');
+        b.innerHTML = `<b>${pad(i)}</b><small>${serial && serial !== '—' && serial !== 'Leyendo…' ? escapar(serial) : (est === 'running' ? 'leyendo' : est === 'error' ? 'error' : 'libre')}</small>`;
+        b.title = `Slot ${pad(i)}` + (serial && serial !== '—' ? ` · ${serial}` : '');
+        b.addEventListener('click', () => { if (rsSel.has(i)) rsSel.delete(i); else rsSel.add(i); rsPintar(); });
+        grid.appendChild(b);
+      }
+      const lista = rsLista();
+      const conTerm = lista.filter((i) => conTerminal.has(i)).length;
+      const enUso = lista.filter(ocupadoSlot).length;
+      const msg = document.getElementById('pin-msg');
+      if (!lista.length) msg.innerHTML = 'Marca los slots que quieres reiniciar.';
+      else {
+        const quienes = lista.length === 16 ? '<b>los 16 slots</b>' : lista.length === 1 ? `el <b>slot ${pad(lista[0])}</b>` : `<b>${lista.length} slots</b> (${lista.map(pad).join(', ')})`;
+        msg.innerHTML = `Se reiniciará ${quienes}.` + (enUso ? ` ${enUso === 1 ? 'Uno está' : enUso + ' están'} <b>en uso</b>.` : '');
+      }
+      const wrap = document.getElementById('rs-cerrar-wrap');
+      wrap.hidden = !conTerm;
+      document.getElementById('rs-cerrar-n').textContent = conTerm ? `(${conTerm} abierta${conTerm === 1 ? '' : 's'})` : '';
+      if (!conTerm) document.getElementById('rs-cerrar').checked = false;
+      document.getElementById('rs-ok').disabled = !lista.length;
+      document.getElementById('rs-ok').textContent = !lista.length ? 'Reiniciar' : lista.length === 16 ? 'Reiniciar todos' : lista.length === 1 ? `Reiniciar slot ${pad(lista[0])}` : `Reiniciar ${lista.length} slots`;
+    }
+    function rsLista() { return rsModo === 'todos' ? Array.from({ length: 16 }, (_, k) => k + 1) : [...rsSel].sort((a, b) => a - b); }
+    document.querySelectorAll('.rs-op').forEach((b) => b.addEventListener('click', () => { rsModo = b.dataset.modo; rsPintar(); }));
+    document.querySelectorAll('[data-marcar]').forEach((b) => b.addEventListener('click', () => {
+      const m = b.dataset.marcar;
+      rsSel.clear();
+      for (let i = 1; i <= 16; i++) {
+        if (m === 'todos' || (m === 'ocupados' && ocupadoSlot(i)) || (m === 'error' && slotStates[i] === 'error')) rsSel.add(i);
+      }
+      rsPintar();
+    }));
+
+    // soloSlot: abre el diálogo con ese slot ya marcado (desde el menú del slot)
+    function resetAllSlots(soloSlot) {
+      rsSel.clear();
+      if (soloSlot) { rsModo = 'elegir'; rsSel.add(soloSlot); }
+      else rsModo = 'todos';
+      document.getElementById('rs-cerrar').checked = false;
+      rsPintar();
       const inp = document.getElementById('pin-input');
       inp.value = '';
       document.getElementById('pin-error').textContent = '';
       document.getElementById('pinModal').style.display = 'flex';
       setTimeout(() => inp.focus(), 50);
     }
+    function reiniciarUnSlot(i) {
+      document.getElementById(`tmenu-${i}`).style.display = 'none';
+      resetAllSlots(i);
+    }
     function cerrarPin() { document.getElementById('pinModal').style.display = 'none'; }
     async function confirmarPin() {
       const inp = document.getElementById('pin-input');
+      const lista = rsLista();
+      if (!lista.length) return;
       if (await huella(inp.value) === HUELLA_REINICIO) {
         cerrarPin();
-        ejecutarReinicio();
+        ejecutarReinicio(lista, document.getElementById('rs-cerrar').checked);
       } else {
         document.getElementById('pin-error').textContent = 'Contraseña incorrecta';
         const caja = document.querySelector('.modal-content.pin');
@@ -1281,8 +1445,14 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
       if (e.key === 'Escape') cerrarPin();
     });
 
-    function ejecutarReinicio() {
-      for (let i = 1; i <= 16; i++) {
+    async function ejecutarReinicio(lista, cerrarTerms) {
+      lista = lista && lista.length ? lista : Array.from({ length: 16 }, (_, k) => k + 1);
+      for (const i of lista) {
+        if (cerrarTerms && conTerminal.has(i)) {
+          try { await ipcRenderer.invoke('terminal:cerrar', i); } catch (e) {}
+          conTerminal.delete(i);
+          document.querySelector(`[data-slot="${i}"]`).classList.remove('tiene-terminal');
+        }
         if (activeTimers[i]) clearInterval(activeTimers[i]);
         delete activeTimers[i];
         slotStates[i] = 'idle';
@@ -1294,10 +1464,15 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
         document.getElementById(`part-${i}`).textContent = '';
         const configEl = document.getElementById(`config-${i}`);
         if (configEl) configEl.style.display = 'none';
-        terminarCorrida(i, 'Sistema reiniciado');
+        terminarCorrida(i, lista.length === 16 ? 'Sistema reiniciado' : 'Slot reiniciado');
+        borrarFicha(i);
       }
-      tele('Sistema reiniciado. Todos los slots libres.', 'info');
-      consoleOutput.textContent = 'Sistema reiniciado.\n';
+      const todos = lista.length === 16;
+      const txt = todos ? 'Sistema reiniciado. Todos los slots libres.'
+        : lista.length === 1 ? `Slot ${pad(lista[0])} reiniciado.` : `Slots ${lista.map(pad).join(', ')} reiniciados.`;
+      tele(txt + (cerrarTerms ? ' Terminales cerradas.' : ''), 'info');
+      if (todos) consoleOutput.textContent = 'Sistema reiniciado.\n';
+      else logToConsole(`\n[reinicio] ${txt}`);
     }
 
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeGlobalConfigModal(); });
@@ -1435,9 +1610,13 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
       document.getElementById(`tmenu-${i}`).style.display = 'none';
       if (slotStates[i] === 'synced') {
         slotStates[i] = 'idle';
+        fichaDeCorrida(i, corridas[i], {
+          serial: document.getElementById(`serial-${i}`).textContent,
+          pn: document.getElementById(`part-${i}`).textContent
+        });
         ponerClase(card, 'slot-card');
         card.classList.remove('tiene-terminal');
-        document.getElementById(`status-${i}`).textContent = 'Cerrada';
+        document.getElementById(`status-${i}`).textContent = fichas[i] && fichas[i].status || 'Cerrada';
         terminarCorrida(i, motivo === 'Cerrada por ti' ? 'Terminal cerrada desde la app' : 'La ventana de la terminal se cerró');
         tele(`Slot ${pad(i)}: terminal cerrada (${motivo.toLowerCase()}).`, 'info');
         logToConsole(`\n[slot ${i}] Terminal cerrada.`);
@@ -1529,6 +1708,11 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
       const segs = bar.children;
 
       card.classList.toggle('corriendo', !!c);
+      if (!c && fichas[i] && fichas[i].detalle && fichas[i].estado === 'cerrada' && slotStates[i] === 'idle') {
+        txt.innerHTML = escapar(fichas[i].detalle);
+        for (const s of segs) { s.className = fichas[i].status === 'Completado' ? 'hecho' : ''; s.style.removeProperty('--p'); }
+        return;
+      }
       if (!c) {
         txt.innerHTML = `${total} ${total === 1 ? 'loop' : 'loops'} · ${total * HORAS_POR_LOOP} h`;
         txt.title = `Loops 0 a ${ultimo}, ${HORAS_POR_LOOP} h cada uno`;
@@ -1575,6 +1759,51 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
     }
     setInterval(() => { for (const k of Object.keys(corridas)) pintarLoops(+k); }, 1000);
 
+    // Guarda cómo quedó un slot cuya terminal ya no está abierta
+    function fichaDeCorrida(i, c, extra = {}) {
+      const serial = (c && c.serial) || extra.serial || '—';
+      const pn = (c && c.pn) || extra.pn || '';
+      let status = 'Cerrada', detalle = '';
+      if (c) {
+        const total = totalLoops(c.loops), t = Date.now() - c.inicio;
+        if (t >= total * MS_LOOP) { status = 'Completado'; detalle = `✓ Completó ${total} ${total === 1 ? 'loop' : 'loops'} · ${total * HORAS_POR_LOOP} h`; }
+        else detalle = `Llegó al loop ${Math.min(total - 1, Math.floor(t / MS_LOOP))}/${c.loops} · ${(t / 3600000).toFixed(1)} h`;
+      }
+      ponerFicha(i, { estado: 'cerrada', serial, pn, status, detalle, loops: c ? c.loops : undefined });
+    }
+    // Pinta en la tarjeta lo guardado (se usa al abrir la app)
+    function pintarFicha(i) {
+      const f = fichas[i];
+      if (!f) return;
+      const card = document.querySelector(`[data-slot="${i}"]`);
+      const st = document.getElementById(`status-${i}`);
+      if (f.estado === 'leyendo') {
+        slotStates[i] = 'error';
+        ponerClase(card, 'slot-card error');
+        st.textContent = 'Interrumpido';
+        document.getElementById(`serial-${i}`).textContent = '—';
+        document.getElementById(`part-${i}`).textContent = '';
+        card.title = 'La app se cerró mientras leía este slot. Vuelve a lanzarlo.';
+        return;
+      }
+      if (f.estado === 'error') {
+        slotStates[i] = 'error';
+        ponerClase(card, 'slot-card error');
+        st.textContent = f.status || 'Error';
+        document.getElementById(`serial-${i}`).textContent = f.serial || 'Error';
+        return;
+      }
+      // terminal cerrada / completado: se queda la información de la unidad
+      slotStates[i] = 'idle';
+      ponerClase(card, 'slot-card con-ficha' + (f.status === 'Completado' ? ' ficha-ok' : ''));
+      st.textContent = f.status || 'Cerrada';
+      document.getElementById(`serial-${i}`).textContent = f.serial || '—';
+      document.getElementById(`part-${i}`).textContent = f.pn || '';
+      const lt = document.getElementById(`loop-${i}`);
+      if (f.detalle && lt) { lt.innerHTML = escapar(f.detalle); lt.title = 'Guardado ' + new Date(f.ts).toLocaleString('es-MX', { hour12: false }); }
+      card.title = `${f.serial || ''} · ${f.status || 'Cerrada'} (${new Date(f.ts).toLocaleString('es-MX', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false })})`;
+    }
+
     // Al abrir la app: recuperar los slots que siguen corriendo (su terminal sigue abierta)
     (async () => {
       let vivas = [];
@@ -1589,8 +1818,10 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
             if (t >= total * MS_LOOP) guardarRegistro({ id: c.hid, estado: 'completado', salida: c.inicio + total * MS_LOOP, motivo: `Terminó sus ${total} loops`, loopAlcanzado: total - 1, horasCorridas: total * HORAS_POR_LOOP });
             else guardarRegistro({ id: c.hid, estado: 'detenido', salida: Date.now(), motivo: 'La terminal se cerró mientras la app estaba cerrada', loopAlcanzado: Math.floor(t / MS_LOOP), horasCorridas: +(t / 3600000).toFixed(2) });
           }
+          fichaDeCorrida(i, c);             // la tarjeta conserva serial, P/N y hasta dónde llegó
           delete corridas[k]; continue;
         }
+        borrarFicha(i);
         slotStates[i] = 'synced';
         const card = document.querySelector(`[data-slot="${i}"]`);
         ponerClase(card, 'slot-card active');
@@ -1605,6 +1836,7 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
       guardarCorridas();
       appLista = true;
       for (let i = 1; i <= 16; i++) pintarLoops(i);
+      for (let i = 1; i <= 16; i++) if (!corridas[i] && fichas[i]) pintarFicha(i);
     })();
 
     /* ---------- Notificaciones al celular (ntfy) ---------- */
