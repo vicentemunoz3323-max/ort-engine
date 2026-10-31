@@ -303,6 +303,33 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
 .scr-n { flex: none; width: 52px; font-size: 12px; font-weight: 500; color: var(--on-surface-variant); }
 .scr-v { flex: none; width: 24px; height: 24px; display: grid; place-items: center; border-radius: 50%; background: var(--primary-container); color: var(--on-primary-container); font: 600 12px var(--font); font-variant-numeric: tabular-nums; }
 .modal-foot { flex: none; display: flex; justify-content: flex-end; gap: 8px; padding: 16px 24px 20px; }
+#modalSlotsList { grid-auto-flow: column; grid-template-rows: repeat(8, auto); }   /* 1-8 a la izquierda, 9-16 a la derecha */
+
+/* ===== Recursos (tanques de agua) ===== */
+.rec-content { width: 620px; }
+.rec-tanques { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; padding: 12px 24px 4px; }
+.rec-t { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.rec-vaso { position: relative; width: 100%; max-width: 132px; height: 200px; border-radius: 22px; background: var(--surface); border: 2px solid var(--outline-variant); overflow: hidden; }
+.rec-agua { --c: #1a73e8; position: absolute; left: 0; right: 0; bottom: 0; height: 0%; background: linear-gradient(180deg, color-mix(in srgb, var(--c) 70%, #fff) 0%, var(--c) 100%); transition: height 1s cubic-bezier(.2,0,0,1), background .4s; }
+.rec-ola { position: absolute; left: 0; top: -13px; width: 200%; height: 14px; animation: rec-ola 3s linear infinite; }
+.rec-ola.o2 { opacity: .45; animation-duration: 5s; animation-direction: reverse; top: -10px; }
+.rec-ola path { fill: color-mix(in srgb, var(--c) 70%, #fff); }
+@keyframes rec-ola { to { transform: translateX(-50%); } }
+.rec-burbuja { position: absolute; bottom: -8px; width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,.55); animation: rec-sube 4s ease-in infinite; }
+@keyframes rec-sube { 0% { transform: translateY(0); opacity: 0; } 15% { opacity: 1; } 100% { transform: translateY(-190px); opacity: 0; } }
+.rec-marcas { position: absolute; inset: 0; pointer-events: none; background: repeating-linear-gradient(to top, transparent 0 calc(25% - 1px), color-mix(in srgb, var(--outline-variant) 70%, transparent) calc(25% - 1px) 25%); }
+.rec-pct { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); padding: 2px 12px; border-radius: 14px; background: color-mix(in srgb, var(--surface) 82%, transparent); font: 600 24px var(--font); font-variant-numeric: tabular-nums; color: var(--on-surface); }
+.rec-nombre { font-size: 13px; font-weight: 600; letter-spacing: .06em; }
+.rec-det { font-size: 12px; color: var(--on-surface-variant); font-variant-numeric: tabular-nums; text-align: center; min-height: 16px; }
+.rec-app { margin: 18px 24px 4px; padding: 14px 16px; border-radius: 16px; background: var(--surface); }
+.rec-app h3 { font-size: 13px; font-weight: 600; margin-bottom: 10px; display: flex; justify-content: space-between; gap: 8px; }
+.rec-app h3 span { font-weight: 400; color: var(--on-surface-variant); }
+.rec-fila { display: grid; grid-template-columns: 44px 1fr 92px; align-items: center; gap: 10px; font-size: 12px; margin-top: 8px; }
+.rec-fila b { font-weight: 600; }
+.rec-fila em { font-style: normal; text-align: right; color: var(--on-surface-variant); font-variant-numeric: tabular-nums; }
+.rec-mini { position: relative; height: 10px; border-radius: 5px; background: var(--surface-high); overflow: hidden; }
+.rec-mini i { position: absolute; inset: 0 auto 0 0; width: 0%; min-width: 2px; border-radius: 5px; background: linear-gradient(90deg, color-mix(in srgb, var(--primary) 60%, #fff), var(--primary)); transition: width 1s cubic-bezier(.2,0,0,1); }
+.rec-err { margin: 10px 24px 0; font-size: 12px; color: var(--error); }
 
 /* ===== Aviso inferior (snackbar) ===== */
 #toast-msg { white-space: pre-line; }
@@ -750,6 +777,9 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
     </div>
     <div class="top-actions">
       <span class="version-chip" id="version">v—</span>
+      <button id="btn-recursos" class="icon-btn ripple" type="button" title="Recursos del equipo (CPU, RAM, disco)" aria-label="Recursos del equipo" onclick="abrirRecursos()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="12" width="4" height="8" rx="1"/><rect x="10" y="7" width="4" height="13" rx="1"/><rect x="17" y="3" width="4" height="17" rx="1"/></svg>
+      </button>
       <button id="btn-manual" class="icon-btn ripple" type="button" title="Manual de usuario (F1)" aria-label="Manual de usuario" onclick="abrirManual()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 5.5A1.5 1.5 0 0 1 3.5 4H9a3 3 0 0 1 3 3v13a2.5 2.5 0 0 0-2.5-2.5h-6A1.5 1.5 0 0 1 2 16z"/><path d="M22 5.5A1.5 1.5 0 0 0 20.5 4H15a3 3 0 0 0-3 3v13a2.5 2.5 0 0 1 2.5-2.5h6a1.5 1.5 0 0 0 1.5-1.5z"/></svg>
       </button>
@@ -1066,6 +1096,54 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
       <div class="modal-body" id="modalSlotsList"></div>
       <div class="modal-foot">
         <button class="btn btn-text ripple" onclick="closeGlobalConfigModal()">Listo</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recursos del equipo -->
+  <div class="modal-overlay" id="recursosModal" onclick="if (event.target === this) cerrarRecursos()">
+    <div class="modal-content rec-content" role="dialog" aria-modal="true" aria-labelledby="rec-title">
+      <div class="modal-header">
+        <h2 id="rec-title">Recursos</h2>
+        <p>Lo que está usando el equipo ahora. Se actualiza cada 2 segundos mientras esta ventana está abierta.</p>
+      </div>
+      <div class="rec-tanques">
+        <div class="rec-t">
+          <div class="rec-vaso" role="meter" aria-label="CPU" aria-valuemin="0" aria-valuemax="100" id="rec-m-cpu">
+            <div class="rec-agua" id="rec-a-cpu"><svg class="rec-ola" viewBox="0 0 200 14" preserveAspectRatio="none" aria-hidden="true"><path d="M0 7 Q12.5 0 25 7 T50 7 T75 7 T100 7 T125 7 T150 7 T175 7 T200 7 V14 H0z"/></svg><svg class="rec-ola o2" viewBox="0 0 200 14" preserveAspectRatio="none" aria-hidden="true"><path d="M0 7 Q12.5 0 25 7 T50 7 T75 7 T100 7 T125 7 T150 7 T175 7 T200 7 V14 H0z"/></svg><i class="rec-burbuja" style="left:22%"></i><i class="rec-burbuja" style="left:55%;animation-delay:1.4s"></i><i class="rec-burbuja" style="left:76%;animation-delay:2.6s"></i></div>
+            <div class="rec-marcas"></div>
+            <div class="rec-pct" id="rec-p-cpu">—</div>
+          </div>
+          <span class="rec-nombre">CPU</span>
+          <span class="rec-det" id="rec-d-cpu"></span>
+        </div>
+        <div class="rec-t">
+          <div class="rec-vaso" role="meter" aria-label="RAM" aria-valuemin="0" aria-valuemax="100" id="rec-m-ram">
+            <div class="rec-agua" id="rec-a-ram"><svg class="rec-ola" viewBox="0 0 200 14" preserveAspectRatio="none" aria-hidden="true"><path d="M0 7 Q12.5 0 25 7 T50 7 T75 7 T100 7 T125 7 T150 7 T175 7 T200 7 V14 H0z"/></svg><svg class="rec-ola o2" viewBox="0 0 200 14" preserveAspectRatio="none" aria-hidden="true"><path d="M0 7 Q12.5 0 25 7 T50 7 T75 7 T100 7 T125 7 T150 7 T175 7 T200 7 V14 H0z"/></svg><i class="rec-burbuja" style="left:22%"></i><i class="rec-burbuja" style="left:55%;animation-delay:1.4s"></i><i class="rec-burbuja" style="left:76%;animation-delay:2.6s"></i></div>
+            <div class="rec-marcas"></div>
+            <div class="rec-pct" id="rec-p-ram">—</div>
+          </div>
+          <span class="rec-nombre">RAM</span>
+          <span class="rec-det" id="rec-d-ram"></span>
+        </div>
+        <div class="rec-t">
+          <div class="rec-vaso" role="meter" aria-label="DISCO" aria-valuemin="0" aria-valuemax="100" id="rec-m-disco">
+            <div class="rec-agua" id="rec-a-disco"><svg class="rec-ola" viewBox="0 0 200 14" preserveAspectRatio="none" aria-hidden="true"><path d="M0 7 Q12.5 0 25 7 T50 7 T75 7 T100 7 T125 7 T150 7 T175 7 T200 7 V14 H0z"/></svg><svg class="rec-ola o2" viewBox="0 0 200 14" preserveAspectRatio="none" aria-hidden="true"><path d="M0 7 Q12.5 0 25 7 T50 7 T75 7 T100 7 T125 7 T150 7 T175 7 T200 7 V14 H0z"/></svg><i class="rec-burbuja" style="left:22%"></i><i class="rec-burbuja" style="left:55%;animation-delay:1.4s"></i><i class="rec-burbuja" style="left:76%;animation-delay:2.6s"></i></div>
+            <div class="rec-marcas"></div>
+            <div class="rec-pct" id="rec-p-disco">—</div>
+          </div>
+          <span class="rec-nombre">DISCO</span>
+          <span class="rec-det" id="rec-d-disco"></span>
+        </div>
+      </div>
+      <div class="rec-app">
+        <h3>Consumo de ORT Engine <span id="rec-app-proc"></span></h3>
+        <div class="rec-fila"><b>CPU</b><div class="rec-mini"><i id="rec-ab-cpu"></i></div><em id="rec-av-cpu">—</em></div>
+        <div class="rec-fila"><b>RAM</b><div class="rec-mini"><i id="rec-ab-ram"></i></div><em id="rec-av-ram">—</em></div>
+      </div>
+      <div class="rec-err" id="rec-err" hidden></div>
+      <div class="modal-foot">
+        <button class="btn btn-text ripple" onclick="cerrarRecursos()">Cerrar</button>
       </div>
     </div>
   </div>
@@ -2596,6 +2674,47 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
       clearInterval(histTimer);
     }
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') cerrarHistorial(); });
+
+    /* ===== Recursos: tanques de agua de CPU / RAM / disco ===== */
+    let recTimer = null;
+    const colorNivel = (v) => v >= 90 ? '#d93025' : v >= 70 ? '#e8a200' : '#1a73e8';   // azul / ámbar / rojo, iguales en claro y oscuro
+    const gb = (v) => v == null ? '' : (v >= 100 ? v.toFixed(0) : v.toFixed(1)) + ' GB';
+    function pintarTanque(k, v, det) {
+      const agua = document.getElementById('rec-a-' + k);
+      const ok = typeof v === 'number';
+      agua.style.height = (ok ? v : 0) + '%';
+      agua.style.setProperty('--c', colorNivel(ok ? v : 0));
+      document.getElementById('rec-p-' + k).textContent = ok ? Math.round(v) + '%' : '—';
+      document.getElementById('rec-m-' + k).setAttribute('aria-valuenow', ok ? Math.round(v) : 0);
+      document.getElementById('rec-d-' + k).textContent = det || '';
+    }
+    async function medirRecursos() {
+      let r;
+      try { r = await ipcRenderer.invoke('recursos:medir'); }
+      catch (e) { const el = document.getElementById('rec-err'); el.hidden = false; el.textContent = 'No se pudo medir: ' + e.message; return; }
+      document.getElementById('rec-err').hidden = true;
+      pintarTanque('cpu', r.cpu, r.nucleos + (r.nucleos === 1 ? ' núcleo' : ' núcleos'));
+      pintarTanque('ram', r.ram, gb(r.ramUsadaGb) + ' de ' + gb(r.ramTotalGb));
+      pintarTanque('disco', r.disco, r.disco == null ? 'Sin dato' : gb(r.discoUsadoGb) + ' de ' + gb(r.discoTotalGb));
+      const a = r.app || {};
+      // la barra chica se escala para que se note aunque el consumo sea poco
+      document.getElementById('rec-ab-cpu').style.width = Math.min(100, a.cpu || 0) + '%';
+      document.getElementById('rec-ab-ram').style.width = Math.min(100, (a.ram || 0) * 4) + '%';
+      document.getElementById('rec-av-cpu').textContent = (a.cpu ?? 0).toFixed(1) + '%';
+      document.getElementById('rec-av-ram').textContent = (a.ramMb ?? 0) + ' MB · ' + (a.ram ?? 0).toFixed(1) + '%';
+      document.getElementById('rec-app-proc').textContent = a.procesos ? a.procesos + ' procesos' : '';
+    }
+    function abrirRecursos() {
+      document.getElementById('recursosModal').style.display = 'flex';
+      medirRecursos();
+      clearInterval(recTimer);
+      recTimer = setInterval(medirRecursos, 2000);
+    }
+    function cerrarRecursos() {
+      document.getElementById('recursosModal').style.display = 'none';
+      clearInterval(recTimer); recTimer = null;
+    }
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') cerrarRecursos(); });
 
     async function exportarHistorial() {
       const lista = filtrados();

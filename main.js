@@ -211,6 +211,46 @@ monitorSlots.configurar({
 });
 monitorSlots.iniciar();
 ipcMain.handle('slot:monitor-todos', () => monitorSlots.todos());
+
+/* ---------- Recursos: CPU / RAM / disco del equipo y lo que consume esta app ---------- */
+let cpuPrevio = null;
+function tiemposCpu() {
+  let ocio = 0, total = 0;
+  for (const c of os.cpus() || []) { const t = c.times; ocio += t.idle; total += t.user + t.nice + t.sys + t.idle + t.irq; }
+  return { ocio, total };
+}
+function leerMeminfo() {
+  try {
+    const t = fs.readFileSync('/proc/meminfo', 'utf8');
+    const kb = (k) => { const m = t.match(new RegExp('^' + k + ':\\s+(\\d+)', 'm')); return m ? +m[1] : null; };
+    const total = kb('MemTotal'), libre = kb('MemAvailable');
+    if (total && libre != null) return { totalKb: total, usadaKb: total - libre };
+  } catch (e) {}
+  return { totalKb: os.totalmem() / 1024, usadaKb: (os.totalmem() - os.freemem()) / 1024 };
+}
+ipcMain.handle('recursos:medir', () => {
+  // CPU: diferencia contra la medición anterior (la primera vez usa la carga promedio)
+  const ahora = tiemposCpu();
+  let cpu;
+  if (cpuPrevio && ahora.total > cpuPrevio.total) cpu = 100 * (1 - (ahora.ocio - cpuPrevio.ocio) / (ahora.total - cpuPrevio.total));
+  else cpu = 100 * os.loadavg()[0] / ((os.cpus() || []).length || 1);
+  cpuPrevio = ahora;
+  const mem = leerMeminfo();
+  let disco = null;
+  try { const f = fs.statfsSync('/'); const total = f.blocks * f.bsize, libre = f.bavail * f.bsize; disco = { totalGb: total / 1073741824, usadoGb: (total - libre) / 1073741824 }; } catch (e) {}
+  // Esta app: suma de todos sus procesos de Electron
+  let appCpu = 0, appMemKb = 0, procesos = 0;
+  try { for (const m of app.getAppMetrics()) { procesos++; appCpu += (m.cpu && m.cpu.percentCPUUsage) || 0; appMemKb += (m.memory && m.memory.workingSetSize) || 0; } } catch (e) {}
+  const nucleos = (os.cpus() || []).length || 1;
+  const lim = (v) => Math.max(0, Math.min(100, Math.round(v * 10) / 10));
+  return {
+    cpu: lim(cpu), nucleos,
+    ram: lim(100 * mem.usadaKb / mem.totalKb), ramUsadaGb: mem.usadaKb / 1048576, ramTotalGb: mem.totalKb / 1048576,
+    disco: disco ? lim(100 * disco.usadoGb / disco.totalGb) : null, discoUsadoGb: disco && disco.usadoGb, discoTotalGb: disco && disco.totalGb,
+    app: { cpu: lim(appCpu / nucleos), ramMb: Math.round(appMemKb / 1024), ram: lim(100 * appMemKb / mem.totalKb), procesos },
+    hora: Date.now()
+  };
+});
 const comillas = (s) => `'${String(s).replace(/'/g, `'\\''`)}'`;
 
 // slotMonitor: número de slot si su salida se debe vigilar (loops y errores)
