@@ -15,7 +15,9 @@ const fs = require('fs');
 const path = require('path');
 
 // ---- Mensajes que se reconocen (sin distinguir mayúsculas; tolera faltas de ortografía) ----
-const RX_EJECUCION = /exc?e?cution\s*#?\s*(\d+)[^\n]{0,40}?start\w*\s+succ?e?ss?\w*/i;
+// "Execution 7 started successfully" (también "Loop 7…", "7 started successfully", con fecha/hora antes, etc.):
+// se toma el número que va justo antes de "started successfully".
+const RX_EJECUCION = /(\d+)\D{0,25}?\bstart\w*\s+succ?e?ss?\w*/i;
 const RX_FALLA = /refused|fail|error|unreachable|timed?\s*out|cannot connect|could not connect|connection reset|no route to host|exception|traceback|fatal|critical|no se pudo|caido|caído/i;
 const RX_SISTEMA = /8090|127\.0\.0\.1|localhost/i;           // el servicio de pruebas de esta PC (open_test)
 const RX_SLOT = [
@@ -41,6 +43,28 @@ function configurar(opc) {
 const pad = (n) => String(n).padStart(2, '0');
 const archivoLog = (s) => path.join(DIR, `slot-${pad(s)}.log`);
 const archivoExit = (s) => path.join(DIR, `slot-${pad(s)}.exit`);
+const archivoEstado = (s) => path.join(DIR, `slot-${pad(s)}.estado.json`);
+
+// El estado (loop actual y a qué hora empezó cada loop) se guarda en disco: si la app se cierra,
+// al volver a abrir sigue desde ahí en lugar de releer el log y poner todas las horas en "ahora".
+function guardarEstado(s) {
+  const e = est[s];
+  if (!e) return;
+  try {
+    const tmp = archivoEstado(s) + '.tmp';
+    fs.writeFileSync(tmp, JSON.stringify(e));
+    fs.renameSync(tmp, archivoEstado(s));
+  } catch (err) {}
+}
+function cargarEstado(s) {
+  try {
+    const e = JSON.parse(fs.readFileSync(archivoEstado(s), 'utf8'));
+    if (!e || e.slot !== s || typeof e.offset !== 'number') return null;
+    const st = fs.statSync(archivoLog(s));
+    if (st.size < e.offset) return null;          // el log es de otra corrida (más chico que lo ya leído)
+    return { ...nuevo(s), ...e };
+  } catch (err) { return null; }
+}
 
 function nuevo(s) {
   return { slot: s, offset: 0, resto: '', loop: null, loopTs: null, ejecuciones: [], estado: 'esperando',
@@ -49,7 +73,7 @@ function nuevo(s) {
 
 // Se llama justo antes de abrir la terminal de un slot: empieza una corrida limpia
 function prepararCorrida(s) {
-  for (const f of [archivoLog(s), archivoExit(s)]) { try { fs.unlinkSync(f); } catch (e) {} }
+  for (const f of [archivoLog(s), archivoExit(s), archivoEstado(s)]) { try { fs.unlinkSync(f); } catch (e) {} }
   est[s] = nuevo(s);
   publicar(s);
 }
@@ -151,13 +175,14 @@ function leer(s) {
       }
     } catch (err) {}
   }
-  if (cambio) { e.cambio = Date.now(); publicar(s); }
+  if (cambio) { e.cambio = Date.now(); guardarEstado(s); publicar(s); }
+  else if (e.offset !== e._offsetGuardado) { e._offsetGuardado = e.offset; guardarEstado(s); }
 }
 
 function publico(s) {
   const e = est[s];
   if (!e) return null;
-  const { offset, resto, ...resto2 } = e;
+  const { offset, resto, _offsetGuardado, ...resto2 } = e;
   return resto2;
 }
 function publicar(s) { try { avisar(s, publico(s)); } catch (e) {} }
@@ -175,7 +200,12 @@ let timer = null;
 function iniciar() {
   if (timer) return;
   // al abrir la app se leen los logs que ya existan (corridas que siguen o que terminaron)
-  for (let s = 1; s <= 16; s++) { try { fs.statSync(archivoLog(s)); leer(s); } catch (e) {} }
+  for (let s = 1; s <= 16; s++) {
+    try { fs.statSync(archivoLog(s)); } catch (e) { continue; }
+    const previo = cargarEstado(s);
+    if (previo) est[s] = previo;
+    leer(s);
+  }
   timer = setInterval(() => { for (let s = 1; s <= 16; s++) if (est[s]) leer(s); }, 1500);
 }
 

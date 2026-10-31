@@ -201,6 +201,25 @@ try {
 } catch (e) {}
 
 const pidFile = (clave) => path.join(DIR_TMP, `${clave}.pid`);
+// Datos de la unidad que corre en cada consola (para recuperarla aunque el script ya haya salido
+// o la app haya perdido lo que tenía guardado)
+const corridaFile = (clave) => path.join(DIR_TMP, `${clave}.corrida.json`);
+function leerCorridaArchivo(clave) { try { return JSON.parse(fs.readFileSync(corridaFile(clave), 'utf8')); } catch (e) { return null; } }
+
+/* ---------- Copia de las corridas en disco ----------
+   La app guarda las corridas en localStorage, pero si se cierra de golpe lo último puede no
+   alcanzar a escribirse. Aquí se guarda también en un archivo (escritura inmediata). */
+const archivoCorridas = () => path.join(app.getPath('userData'), 'corridas.json');
+ipcMain.on('corridas:leer-sync', (e) => {
+  try { e.returnValue = JSON.parse(fs.readFileSync(archivoCorridas(), 'utf8')); } catch (err) { e.returnValue = null; }
+});
+ipcMain.on('corridas:guardar', (_e, datos) => {
+  try {
+    const tmp = archivoCorridas() + '.tmp';
+    fs.writeFileSync(tmp, JSON.stringify(datos));
+    fs.renameSync(tmp, archivoCorridas());
+  } catch (err) {}
+});
 const marcaAdoptada = (clave) => path.join(DIR_TMP, `${clave}.adoptada`);
 
 /* ---------- Vigilar la salida de cada slot (loops reales y errores) ---------- */
@@ -258,6 +277,7 @@ function abrirTerminal(clave, titulo, comando, slotMonitor) {
   const homeDir = app.getPath('home');
   try { fs.unlinkSync(pidFile(clave)); } catch (e) {}
   try { fs.unlinkSync(marcaAdoptada(clave)); } catch (e) {}
+  try { fs.unlinkSync(corridaFile(clave)); } catch (e) {}
   let ejecutar = comando;
   if (slotMonitor) {
     monitorSlots.prepararCorrida(slotMonitor);
@@ -410,6 +430,20 @@ ipcMain.handle('terminal:detectar', async () => {
       ventana: ventanas ? ventanas.has(p.slot) : null
     });
   }
+  // Consolas abiertas por la app cuyo script ya salió (por ejemplo, ot_regression.py sale en cuanto
+  // arranca el último loop, pero ese loop sigue corriendo 8 h): se recuperan con lo que se guardó al lanzar.
+  for (let s = 1; s <= 16; s++) {
+    if (porSlot[s]) {
+      const c = leerCorridaArchivo(claveSlot(s)), item = lista.find((x) => x.slot === s);
+      if (c && item && item.deLaApp && c.serial === item.serial) item.inicio = c.inicio;   // hora exacta de lanzamiento
+      continue;
+    }
+    if (!leerPid(claveSlot(s))) continue;
+    const c = leerCorridaArchivo(claveSlot(s));
+    if (!c || !c.serial) continue;
+    lista.push({ slot: s, serial: c.serial, pn: c.pn, loops: c.loops, inicio: c.inicio,
+      deLaApp: !fs.existsSync(marcaAdoptada(claveSlot(s))), ventana: ventanas ? ventanas.has(s) : null, scriptTermino: true });
+  }
   return lista.sort((a, b) => a.slot - b.slot);
 });
 
@@ -420,6 +454,12 @@ ipcMain.handle('read-eeprom', async (event, slotNum, loopsNum = 7, launchTermina
     const regressionCommandStr = `${regressionScript} ${slotNum} ${detectedPartNumber || '0000000'} ${detectedSerial || 'FLG-0000'} ${loopsNum} ${staticValue}`;
 
     abrirTerminal(claveSlot(slotNum), tituloSlot(slotNum), regressionCommandStr, slotNum);
+    try {
+      fs.writeFileSync(corridaFile(claveSlot(slotNum)), JSON.stringify({
+        slot: slotNum, serial: detectedSerial || 'FLG-0000', pn: detectedPartNumber || '0000000',
+        loops: parseInt(loopsNum, 10), inicio: Date.now()
+      }));
+    } catch (e) {}
 
     return {
       slot: slotNum,

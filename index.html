@@ -1240,6 +1240,12 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
     let corridas = {};                 // slot -> { inicio, loops, serial, pn, avisado }
     var appLista = false;              // los avisos solo salen cuando la app ya terminó de cargar
     try { corridas = JSON.parse(localStorage.getItem('ort_corridas') || '{}'); } catch (e) {}
+    // Copia en disco (main.js): si la app se cerró de golpe, localStorage puede no tener lo último
+    try {
+      const enDisco = ipcRenderer.sendSync('corridas:leer-sync');
+      const tsLocal = parseInt(localStorage.getItem('ort_corridas_ts') || '0', 10) || 0;
+      if (enDisco && enDisco.corridas && (enDisco.ts || 0) > tsLocal) corridas = enDisco.corridas;
+    } catch (e) {}
     const pad = (n) => (n < 10 ? '0' + n : '' + n);
     var monitor = {};                  // salida de cada terminal: loop real y errores (lo manda main.js)
 
@@ -2089,7 +2095,40 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
     setInterval(revisarTerminales, 3000);
 
     /* ---------- Contador de loops (8 h por loop, contando desde 0) ---------- */
-    function guardarCorridas() { try { localStorage.setItem('ort_corridas', JSON.stringify(corridas)); } catch (e) {} }
+    function guardarCorridas() {
+      const ts = Date.now();
+      try { localStorage.setItem('ort_corridas', JSON.stringify(corridas)); localStorage.setItem('ort_corridas_ts', String(ts)); } catch (e) {}
+      try { ipcRenderer.send('corridas:guardar', { ts, corridas }); } catch (e) {}
+    }
+
+    // ¿Cómo va / cómo terminó la corrida, según la salida de la terminal?
+    // Así trabaja ot_regression.py (visto en la consola):
+    //   Execution N started successfully          ← arranca el loop N (8 h)
+    //   Station is active. Sleeping 1200 seconds… ← cada 20 min mientras la estación prueba (~23 veces)
+    //   Station is idle.                          ← terminó ese loop
+    //   Starting process station … / Execution N+1 started successfully …
+    // Al arrancar el ÚLTIMO loop el script sale y regresa el prompt, pero la estación sigue
+    // probando ese loop sus 8 h. Entonces:
+    //  - Regresó el prompt después de "Execution <último> started" → normal; termina a las 8 h de ese mensaje
+    //  - Regresó el prompt en un loop anterior (o sin ningún "started") → FALLÓ, terminó antes de tiempo
+    function finDeCorrida(c, m) {
+      const total = totalLoops(c.loops), ultimo = total - 1;
+      const sinLoop = m.loop === null || m.loop === undefined;
+      const actual = Math.max(0, Math.min(ultimo, sinLoop ? 0 : m.loop));
+      const base = m.loopTs || c.inicio;
+      const fin = base + (total - actual) * MS_LOOP;
+      const salio = m.estado === 'terminado' && m.exit === 0;
+      const enUltimo = !sinLoop && m.loop >= ultimo;
+      const horaSalida = m.exitTs || Date.now();
+      return { actual, base, fin, salio, enUltimo,
+        terminado: salio && enUltimo && Date.now() >= fin,
+        anticipada: salio && !enUltimo,
+        faltaba: Math.max(0, fin - horaSalida) };
+    }
+    function anticipada(i) {
+      const c = corridas[i], m = monitor[i];
+      return !!(c && m && monitorDeCorrida(i) && finDeCorrida(c, m).anticipada);
+    }
 
     function totalLoops(ultimo) { return ultimo + 1; }   // 0..N = N+1 loops
     function duracion(ms) {
@@ -2180,6 +2219,28 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
       card.classList.toggle('caido', real && (m.estado === 'slot' || m.estado === 'sistema'));
       card.classList.toggle('sist-caido', real && m.estado === 'sistema');
       const statusEl = document.getElementById(`status-${i}`);
+      const fr = real ? finDeCorrida(c, m) : null;
+      if (fr && fr.anticipada) {
+        const n = fr.actual;
+        card.classList.add('caido');
+        ponerHTML(txt, `<b>⚠ Terminó antes de tiempo</b> · loop ${n}/${ultimo}`);
+        ponerTitulo(txt, `La consola terminó ${fechaHora(m.exitTs || Date.now())}, en el loop ${n} de 0–${ultimo}.\nFaltaban aprox. ${duracion(fr.faltaba)} para completar.`);
+        ponerTexto(statusEl, 'Falló');
+        Array.from(segs).forEach((sg, k) => ponerSeg(sg, k < n ? 'hecho' : k === n ? 'falla' : ''));
+        card.classList.remove('terminado');
+        if (c.hid && !c.cerradoHist) {
+          c.cerradoHist = true; guardarCorridas();
+          const motivo = `Terminó antes de tiempo en el loop ${n}/${ultimo} (faltaban ${duracion(fr.faltaba)})`;
+          guardarRegistro({ id: c.hid, estado: 'caido', salida: m.exitTs || Date.now(), motivo, loopAlcanzado: n, horasCorridas: +(((m.exitTs || Date.now()) - c.inicio) / 3600000).toFixed(2) });
+          notificar('detenido', { title: `Slot ${pad(i)} · FALLÓ`, message: `${c.serial} · P/N ${c.pn}\n${motivo}`, tags: ['rotating_light'], priority: 5 });
+          if (appLista) {
+            tele(`Slot ${pad(i)}: <b>terminó antes de tiempo</b> en el loop ${n}/${ultimo} (faltaban ${duracion(fr.faltaba)}).`, 'err');
+            mostrarToast({ titulo: `Slot ${pad(i)} falló`, msg: `${c.serial}: la consola terminó antes de tiempo en el loop ${n}/${ultimo}.`, tipo: 'err', autoOcultar: 20000 });
+            try { new Notification('ORT Engine · Slot ' + pad(i) + ' falló', { body: `Terminó antes de tiempo en el loop ${n}/${ultimo}` }); } catch (e) {}
+          }
+        }
+        return;
+      }
       if (real && (m.estado === 'slot' || m.estado === 'sistema')) {
         const n = m.loop === null ? -1 : Math.min(total - 1, m.loop);
         ponerHTML(txt, `<b>⚠ ${m.estado === 'sistema' ? 'Sistema caído' : 'Slot caído'}</b>` + (n >= 0 ? ` · loop ${n}/${ultimo}` : ''));
@@ -2202,11 +2263,12 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
       let dentro = transcurrido - actual * MS_LOOP;
       let terminado = transcurrido >= total * MS_LOOP;
       if (real) {
-        actual = Math.max(0, Math.min(total - 1, m.loop === null ? 0 : m.loop));
-        dentro = Math.max(0, Date.now() - (m.loopTs || c.inicio));
-        fin = (m.loopTs || c.inicio) + (total - actual) * MS_LOOP;
-        terminado = m.estado === 'terminado' && m.exit === 0;
-        if (terminado) { fin = m.exitTs || Date.now(); transcurrido = fin - c.inicio; }
+        const f = finDeCorrida(c, m);
+        actual = f.actual;
+        dentro = Math.max(0, Date.now() - f.base);
+        fin = f.fin;
+        terminado = f.terminado;
+        if (terminado) transcurrido = fin - c.inicio;
       }
 
       if (terminado) {
@@ -2235,7 +2297,9 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
       card.classList.remove('terminado');
       const queda = MS_LOOP - dentro;
       ponerHTML(txt, `Loop <b>${actual}/${ultimo}</b> · ${queda > 0 ? duracion(queda) : 'por terminar'}`);
-      ponerTitulo(txt, `Loop ${actual} de 0–${ultimo}` + (real ? ` · empezó ${fechaHora(m.loopTs)} (mensaje de la terminal)` : ' (calculado por tiempo)') +
+      ponerTitulo(txt, `Loop ${actual} de 0–${ultimo}` + (real ? ` · empezó ${fechaHora(m.loopTs || c.inicio)} (mensaje de la terminal)` : ' (calculado por tiempo)') +
+        (fr && fr.salio && fr.enUltimo ? '\nLa consola ya regresó al prompt (normal en el último loop): la estación sigue probando sus 8 h' : '') +
+
         `\n${queda > 0 ? 'Quedan ' + duracion(queda) + ' de este loop' : 'Ya pasaron 8 h: esperando el siguiente "Execution"'}\nTotal restante aprox.: ${duracion(Math.max(0, fin - Date.now()))} · termina ${fechaHora(fin)}`);
       if (dentro > MS_LOOP) dentro = MS_LOOP;
       // el avance del loop actual se redondea a 0.1 % (cambia cada ~30 s, no cada segundo)
@@ -2259,7 +2323,7 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
     }
     function estadoVisible(i) {
       const m = monitor[i];
-      if (slotStates[i] === 'synced' && corridas[i] && m && monitorDeCorrida(i) && (m.estado === 'slot' || m.estado === 'sistema')) return 'error';
+      if (slotStates[i] === 'synced' && corridas[i] && m && monitorDeCorrida(i) && (m.estado === 'slot' || m.estado === 'sistema' || anticipada(i))) return 'error';
       return slotStates[i];
     }
     function recibirMonitor(i, m, inicial) {
@@ -2331,7 +2395,9 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
       if (c) {
         const total = totalLoops(c.loops), t = Date.now() - c.inicio;
         const m = monitorDeCorrida(i) ? monitor[i] : null;
-        if (m && m.estado === 'terminado' && m.exit === 0) { status = 'Completado'; detalle = `✓ Completó ${total} ${total === 1 ? 'loop' : 'loops'}`; }
+        const f = m ? finDeCorrida(c, m) : null;
+        if (f && f.terminado) { status = 'Completado'; detalle = `✓ Completó ${total} ${total === 1 ? 'loop' : 'loops'}`; }
+        else if (f && f.anticipada) { status = 'Falló'; detalle = `⚠ Terminó antes de tiempo en loop ${f.actual}/${c.loops}`; }
         else if (m && (m.estado === 'slot' || m.estado === 'sistema')) { status = 'Caído'; detalle = `⚠ ${m.estado === 'sistema' ? 'Sistema caído' : 'Slot caído'} en loop ${m.loop ?? 0}/${c.loops}`; }
         else if (m && m.loop !== null) detalle = `Llegó al loop ${m.loop}/${c.loops} · ${(t / 3600000).toFixed(1)} h`;
         else if (!m && t >= total * MS_LOOP) { status = 'Completado'; detalle = `✓ Completó ${total} ${total === 1 ? 'loop' : 'loops'} · ${total * HORAS_POR_LOOP} h`; }
