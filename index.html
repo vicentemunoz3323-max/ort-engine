@@ -827,16 +827,16 @@ main { gap: 10px; padding: 14px 16px 0; }
 .btn-outlined.peligro { color: var(--error); background: var(--surface); }
 .btn:hover, .btn-tonal:hover, .btn-filled:hover { box-shadow: var(--sombra); }
 
-/* Distribución: los slots a todo lo ancho; actividad y terminal se abren desde la barra */
-.layout, .layout.act-cerrada, .layout.con-cerrada, .layout.act-cerrada.con-cerrada { grid-template-columns: minmax(0, 1fr) 340px; grid-template-rows: minmax(0, 1fr) minmax(0, 1fr); }
-.layout.act-cerrada.con-cerrada { grid-template-columns: minmax(0, 1fr) 0; column-gap: 0; }
-.slots-card { grid-column: 1; grid-row: 1 / 3; container-type: size; background: transparent; border: 0; border-radius: 0; box-shadow: none; overflow: visible; }
-.card.act-card { grid-column: 2; grid-row: 1; }
-.bottom-console { grid-column: 2; grid-row: 2; }
-.layout.con-cerrada .card.act-card { grid-row: 1 / 3; }
-.layout.act-cerrada .bottom-console { grid-row: 1 / 3; }
+/* Distribución: los slots siempre a todo lo ancho; actividad y terminal flotan bajo la barra */
+.layout, .layout.act-cerrada, .layout.con-cerrada, .layout.act-cerrada.con-cerrada { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); gap: 0; }
+.slots-card { grid-column: 1; grid-row: 1; container-type: size; background: transparent; border: 0; border-radius: 0; box-shadow: none; overflow: visible; }
+.card.act-card, .bottom-console { position: fixed; z-index: 60; right: 16px; width: min(420px, calc(100vw - 32px)); height: calc((100vh - 112px) / 2); animation: aparecer .15s cubic-bezier(.2,0,0,1); }
+.card.act-card { top: 72px; }
+.bottom-console { top: calc(82px + (100vh - 112px) / 2); }
+.layout.act-cerrada .bottom-console { top: 72px; }
 .act-card.recogida, .bottom-console.recogida { display: none; }
 .card, .bottom-console { border: 1px solid var(--contorno-suave); border-radius: 10px; box-shadow: var(--sombra); }
+.card.act-card, .bottom-console { border-color: var(--contorno); box-shadow: 0 14px 34px rgba(16, 24, 40, .22); }
 .slots-card.card { border: 0; box-shadow: none; }
 .slots-card > .card-head { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); padding: 0 0 8px; min-height: 0; }
 .slots-card .chips { grid-column: 2; justify-content: center; }
@@ -846,40 +846,37 @@ main { gap: 10px; padding: 14px 16px 0; }
 .chip[aria-pressed="true"] { background: var(--secondary-container); }
 
 /* Tarjetas de slot */
-/* Una sola columna: 16 botones largos y grandes, con scroll */
-.slots-panel { padding: 1px 6px 6px 1px; gap: 10px; overflow-y: auto; grid-template-columns: minmax(0, 1fr); grid-template-rows: none; grid-auto-rows: 84px; align-content: start; }
-.slot-card { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; align-items: center; column-gap: 16px; padding: 8px 18px 8px 16px; border: 1px solid var(--contorno-suave); border-left: 3px solid var(--primary); border-radius: 10px; background: var(--surface); box-shadow: var(--sombra); }
+/* Dos columnas: del 1 al 8 a la izquierda y del 9 al 16 a la derecha */
+.slots-panel { padding: 1px 6px 6px 1px; gap: 6px 10px; overflow-y: auto; grid-auto-flow: column; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(8, minmax(58px, 72px)); grid-auto-rows: auto; align-content: start; }
+.slot-card { display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; align-items: center; column-gap: 12px; padding: 0 10px 0 10px; border: 1px solid var(--contorno-suave); border-left: 3px solid var(--primary); border-radius: 10px; background: var(--surface); box-shadow: var(--sombra); }
 .slot-card:hover { border-color: var(--contorno); border-left-color: var(--primary); box-shadow: 0 4px 14px rgba(16, 24, 40, .08); }
 .slot-card:active { transform: none; }
-.slot-icon { width: 44px; height: 44px; padding: 10px; border-radius: 10px; background: color-mix(in srgb, var(--acento, var(--primary)) 10%, transparent); color: var(--acento, var(--primary)); transition: background .25s, color .25s; }
+.slot-icon { width: 30px; height: 30px; padding: 6px; border-radius: 8px; background: color-mix(in srgb, var(--acento, var(--primary)) 10%, transparent); color: var(--acento, var(--primary)); transition: background .25s, color .25s; }
 .slot-icon svg { width: 100%; height: 100%; }
-.slot-info { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.slot-info { min-width: 0; display: grid; grid-template-columns: minmax(0, 130px) minmax(0, 1fr); align-items: center; gap: 1px 10px; }
+.slot-top, .loop-bar { grid-column: 1 / -1; }
 .slot-top { justify-content: flex-start; gap: 7px; min-width: 0; }
-.slot-number { flex: none; font-size: 16px; font-weight: 600; letter-spacing: -.01em; color: var(--on-surface); }
-.slot-serial { min-width: 0; padding: 1px 6px; border-radius: 5px; background: color-mix(in srgb, var(--on-surface) 5%, transparent); color: var(--on-surface-variant); font: 500 11.5px/1.4 var(--mono); letter-spacing: 0; }
+.slot-number { flex: none; font-size: 14px; font-weight: 600; letter-spacing: -.01em; color: var(--on-surface); }
+.slot-serial { min-width: 0; padding: 1px 6px; border-radius: 5px; background: color-mix(in srgb, var(--on-surface) 5%, transparent); color: var(--on-surface-variant); font: 500 11px/1.4 var(--mono); letter-spacing: 0; }
 .slot-pn { min-height: 0; font: 600 10.5px/1.35 var(--font); letter-spacing: .04em; text-transform: uppercase; color: var(--on-surface-variant); }
 .slot-pn:not(:empty)::before { opacity: 1; }
 .slot-pn:empty::before { content: "P/N —"; opacity: .7; }
 .slot-loop { display: block; font: 400 12.5px/1.35 var(--font); }
-.loop-bar { height: 5px; margin-top: 3px; }
+.loop-bar { height: 5px; margin-top: 2px; }
 .slot-card:not(.active) .loop-bar { opacity: 1; }
-.slot-lado { display: flex; align-items: center; gap: 14px; }
-.slot-pill { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-width: 118px; height: 30px; padding: 0 12px; border: 1px solid var(--contorno-suave); border-radius: 999px; background: var(--surface-low); color: var(--on-surface-variant); font-size: 12px; font-weight: 600; letter-spacing: .02em; white-space: nowrap; transition: background .25s, color .25s, border-color .25s; }
+.slot-lado { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+.slot-pill { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-width: 112px; height: 24px; padding: 0 10px; border: 1px solid var(--contorno-suave); border-radius: 999px; background: var(--surface-low); color: var(--on-surface-variant); font-size: 12px; font-weight: 600; letter-spacing: .02em; white-space: nowrap; transition: background .25s, color .25s, border-color .25s; }
 .slot-pill .slot-status, .slot-card.corriendo.active .slot-pill .slot-status { display: inline; height: auto; padding: 0; border-radius: 0; font: inherit; background: none !important; color: inherit !important; }
 .slot-led { flex: none; width: 8px; height: 8px; }
-.slot-tools { gap: 4px; }
-.slot-tools button { width: 32px; height: 32px; }
-.slot-tools button svg { width: 18px; height: 18px; }
+.slot-tools { gap: 2px; }
+.slot-tools button { width: 26px; height: 26px; }
+.slot-tools button svg { width: 16px; height: 16px; }
 .term-btn { display: grid; visibility: hidden; }
 .slot-card.tiene-terminal .term-btn { visibility: visible; }
 
 /* Ventana angosta: los filtros se compactan para que quepan */
-@container (max-width: 780px) { .slots-card .card-title { display: none; } }
-@container (max-width: 620px) {
-  .chips { gap: 4px; flex-wrap: nowrap; }
-  .chip { padding: 0 7px; gap: 5px; font-size: 11.5px; }
-  .slot-card { column-gap: 12px; padding: 8px 12px; }
-  .slot-lado { gap: 6px; }
+@container (min-width: 1300px) {
+  .slot-lado { flex-direction: row; align-items: center; gap: 10px; }
 }
 
 /* Estados: la orilla, el ícono y la píldora cambian de color */
@@ -896,13 +893,13 @@ main { gap: 10px; padding: 14px 16px 0; }
 :root[data-theme="dark"] .slot-card.booting .slot-pill { color: var(--warning); }
 
 /* Paneles dentro de la tarjeta: acomodados a lo ancho porque la tarjeta es baja */
-.term-menu { flex-direction: row; flex-wrap: nowrap; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 10px; border: 1px solid var(--contorno); }
-.tm-btn { flex: 1 1 0; min-width: 0; height: 40px; padding: 0 10px; border-radius: 8px; font-size: 12.5px; white-space: nowrap; }
+.term-menu { flex-direction: row; flex-wrap: nowrap; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 10px; border: 1px solid var(--contorno); }
+.tm-btn { flex: 1 1 0; min-width: 0; height: 32px; padding: 0 10px; border-radius: 8px; font-size: 12.5px; white-space: nowrap; }
 .tm-btn.cancelar { justify-content: center; }
-.slot-config { flex-direction: row; flex-wrap: nowrap; align-items: center; gap: 16px; padding: 8px 18px; border-radius: 10px; border: 1px solid var(--contorno); }
+.slot-config { flex-direction: row; flex-wrap: nowrap; align-items: center; gap: 16px; padding: 4px 12px; border-radius: 10px; border: 1px solid var(--contorno); }
 .sc-head { flex: none; align-items: center; gap: 10px; justify-content: flex-start; font-size: 13px; white-space: nowrap; }
 .sc-head b { font-size: 18px; }
-.sc-ok { order: 4; align-self: center; flex: none; height: 36px; padding: 0 18px; border-radius: 8px; font-size: 13px; font-weight: 600; }
+.sc-ok { order: 4; align-self: center; flex: none; height: 30px; padding: 0 16px; border-radius: 8px; font-size: 13px; font-weight: 600; }
 .slot-config input[type=range] { order: 3; flex: 1 1 0; min-width: 0; width: auto; height: 20px; }
 </style>
   <link rel="stylesheet" href="manual/manual.css">
@@ -1420,7 +1417,6 @@ main { gap: 10px; padding: 14px 16px 0; }
 
     /* ---------- Paneles retráctiles: Actividad (Ctrl+B) y Salida de terminal (Ctrl+J) ---------- */
     var paneles = { act: true, con: true };          // true = recogido
-    try { paneles = { ...paneles, ...JSON.parse(localStorage.getItem('ort_paneles') || '{}') }; } catch (e) {}
     var pendientes = { act: 0, actErr: false, con: 0 };
     function aplicarPaneles(animar) {
       const lay = document.querySelector('.layout');
