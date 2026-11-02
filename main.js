@@ -339,6 +339,38 @@ ipcMain.handle('terminal:vivas', () => {
 
 ipcMain.handle('terminal:capacidad', () => revisarEnfoque());
 
+/* Recuadro del servidor: el nombre del prompt de la consola (usuario@equipo), la IP
+   de la interfaz principal (eno1 y, si no existe, sfc*) y si responde a ping. */
+const INTERFACES_PRINCIPALES = [/^eno1$/i, /^sfc/i];
+function ipPrincipal() {
+  const interfaces = os.networkInterfaces();
+  for (const patron of INTERFACES_PRINCIPALES) {
+    for (const [nombre, direcciones] of Object.entries(interfaces)) {
+      if (!patron.test(nombre)) continue;
+      const v4 = (direcciones || []).find((d) => (d.family === 'IPv4' || d.family === 4) && !d.internal);
+      if (v4) return v4.address;
+    }
+  }
+  return null;
+}
+function hacerPing(ip) {
+  return new Promise((resolve) => {
+    let listo = false;
+    const fin = (v) => { if (!listo) { listo = true; clearTimeout(limite); resolve(v); } };
+    const limite = setTimeout(() => { try { proc.kill(); } catch (e) {} fin(false); }, 4000);
+    let proc;
+    try { proc = spawn('ping', ['-c', '1', '-W', '2', ip]); } catch (e) { return fin(false); }
+    proc.on('error', () => fin(false));
+    proc.on('close', (code) => fin(code === 0));
+  });
+}
+ipcMain.handle('servidor:info', async () => {
+  let usuario = '';
+  try { usuario = os.userInfo().username; } catch (e) {}
+  const ip = ipPrincipal();
+  return { nombre: `${usuario}@${os.hostname()}`, ip, vivo: ip ? await hacerPing(ip) : false };
+});
+
 // Traer al frente la terminal del slot
 ipcMain.handle('terminal:mostrar', async (_e, slot) => {
   if (!leerPid(claveSlot(slot))) return { ok: false, motivo: 'cerrada' };

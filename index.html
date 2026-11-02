@@ -764,6 +764,146 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
   .act-tab-txt { writing-mode: horizontal-tb; transform: none; }
   .act-tab-tira { flex-direction: row; justify-content: flex-end; }
 }
+
+/* ===================== Diseño estilo Connection Validation =====================
+   Solo apariencia: toda la lógica sigue igual. */
+:root {
+  --primary: #1d5ccf; --on-primary: #ffffff; --primary-container: #d9e5fa; --on-primary-container: #0e2c66;
+  --secondary-container: #e4ecfa; --on-secondary-container: #174ba9;
+  --bg: #eceff3; --surface: #ffffff; --surface-low: #f4f6f9; --surface-high: #e9edf2;
+  --on-surface: #16202b; --on-surface-variant: #5b6676; --outline: #8b95a3; --outline-variant: #d8dde4;
+  --success: #12894a; --error: #c8261d;
+  --contorno: #c2c9d3; --contorno-suave: #d8dde4;
+  --sombra: 0 1px 2px rgba(16, 24, 40, .06), 0 1px 1px rgba(16, 24, 40, .03);
+}
+:root[data-theme="dark"] { --contorno: #4a4e52; --contorno-suave: #3a3d40; }
+
+/* Barra superior */
+.topbar { height: 64px; padding: 0 16px; display: grid; grid-template-columns: 1fr auto 1fr; gap: 12px; background: var(--surface); border-bottom: 1px solid var(--contorno-suave); box-shadow: 0 1px 0 rgba(16, 24, 40, .03); }
+.brand-logo { width: 46px; height: 46px; border-radius: 11px !important; cursor: pointer; box-shadow: 0 1px 3px rgba(16, 24, 40, .18); }
+.nav-links { display: flex; align-items: center; gap: 4px; }
+.nav-link { position: relative; height: 36px; padding: 0 14px; border: 0; border-radius: 8px; background: none; color: var(--on-surface-variant); font: 500 13.5px var(--font); letter-spacing: -.005em; white-space: nowrap; cursor: pointer; transition: color .18s, background-color .18s; }
+.nav-link:hover { color: var(--on-surface); background: var(--surface-low); }
+.nav-link.active { color: var(--primary); background: color-mix(in srgb, var(--primary) 9%, transparent); font-weight: 600; cursor: default; }
+.nav-link .punto-ntfy { display: none; position: absolute; top: 7px; right: 6px; width: 7px; height: 7px; border-radius: 50%; background: var(--success); }
+.nav-link.ntfy-on .punto-ntfy { display: block; }
+.nav-links { min-width: 0; }
+.nav-links .nav-link { display: inline-flex; align-items: center; gap: 6px; }
+body:has(#act-card:not(.recogida)) #nav-act, body:has(#con-card:not(.recogida)) #nav-con { color: var(--primary); background: color-mix(in srgb, var(--primary) 9%, transparent); font-weight: 600; }
+body:has(#act-card.alerta) #nav-act { color: var(--error); background: color-mix(in srgb, var(--error) 9%, transparent); }
+#nav-con .uc-nuevas { height: 18px; padding: 0 7px; font-size: 10px; background: var(--primary); color: var(--on-primary); }
+#nav-con .uc-nuevas:not([hidden]) { display: inline-flex; }
+#nav-act .act-tab-badge { min-width: 18px; height: 18px; font-size: 10px; }
+@media (max-width: 1040px) { .nav-link { padding: 0 9px; } .version-chip { display: none; } }
+.top-actions { justify-content: flex-end; gap: 8px; }
+.version-chip { height: 24px; margin-right: 2px; border-radius: 6px; }
+.top-actions .icon-btn { width: 34px; height: 34px; border: 1px solid var(--contorno-suave); background: var(--surface); color: var(--on-surface); }
+.top-actions .icon-btn:hover { background: var(--surface-low); border-color: var(--contorno); }
+.top-actions .icon-btn svg { width: 16px; height: 16px; }
+.top-actions .icon-btn .punto { top: 4px; right: 4px; box-shadow: 0 0 0 2px var(--surface); }
+
+/* Título grande */
+main { gap: 10px; padding: 14px 16px 0; }
+.head { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(max-content, 1fr); padding: 0 0 10px; border-bottom: 1px solid var(--contorno); }
+.head-titulo { grid-column: 2; }
+.head h1 { font-size: 36px; font-weight: 700; letter-spacing: .01em; line-height: 1.1; text-align: center; white-space: nowrap; }
+.servidor { grid-column: 1; justify-self: start; min-width: 0; max-width: 100%; min-height: 46px; display: flex; align-items: center; gap: 12px; padding: 4px 8px 4px 12px; border: 1px solid var(--contorno); border-radius: 13px; background: transparent; }
+.sv-datos { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.sv-nombre { font-size: 13px; font-weight: 600; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sv-ip { font: 11.5px/1.3 var(--mono); color: var(--on-surface-variant); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sv-estado { flex: none; display: inline-flex; align-items: center; gap: 7px; height: 30px; padding: 0 12px; border: 1px solid var(--contorno-suave); border-radius: 999px; background: var(--surface-low); color: var(--on-surface-variant); font-size: 12px; font-weight: 600; white-space: nowrap; }
+.sv-estado i { width: 8px; height: 8px; border-radius: 50%; background: #d48806; }
+.servidor.online .sv-estado { color: var(--success); background: color-mix(in srgb, var(--success) 8%, transparent); border-color: color-mix(in srgb, var(--success) 35%, transparent); }
+.servidor.online .sv-estado i { background: var(--success); }
+.servidor.offline .sv-estado { color: var(--error); background: color-mix(in srgb, var(--error) 8%, transparent); border-color: color-mix(in srgb, var(--error) 35%, transparent); }
+.servidor.offline .sv-estado i { background: var(--error); }
+.head-actions { grid-column: 3; justify-self: end; flex-wrap: nowrap; gap: 6px; padding: 5px; border: 1px solid var(--contorno); border-radius: 13px; background: transparent; }
+@media (max-width: 980px) { .head { column-gap: 8px; } .sv-estado { padding: 0 9px; gap: 5px; } .servidor { gap: 8px; padding-left: 9px; } .head h1 { font-size: 30px; } .head-actions { gap: 4px; padding: 4px; } .head-actions .btn { padding: 0 9px 0 7px; font-size: 12.5px; } }
+.btn { height: 34px; padding: 0 14px 0 11px; border-radius: 8px; font-weight: 600; }
+.btn, .btn-outlined, .btn-outlined.peligro { border: 1px solid var(--contorno); }
+.btn-filled { background: var(--primary); border-color: var(--primary); }
+.btn-tonal { background: var(--surface); color: var(--on-surface); }
+.btn-outlined { background: var(--surface); color: var(--on-surface); }
+.btn-outlined.peligro { color: var(--error); background: var(--surface); }
+.btn:hover, .btn-tonal:hover, .btn-filled:hover { box-shadow: var(--sombra); }
+
+/* Distribución: los slots a todo lo ancho; actividad y terminal se abren desde la barra */
+.layout, .layout.act-cerrada, .layout.con-cerrada, .layout.act-cerrada.con-cerrada { grid-template-columns: minmax(0, 1fr) 340px; grid-template-rows: minmax(0, 1fr) minmax(0, 1fr); }
+.layout.act-cerrada.con-cerrada { grid-template-columns: minmax(0, 1fr) 0; column-gap: 0; }
+.slots-card { grid-column: 1; grid-row: 1 / 3; container-type: size; background: transparent; border: 0; border-radius: 0; box-shadow: none; overflow: visible; }
+.card.act-card { grid-column: 2; grid-row: 1; }
+.bottom-console { grid-column: 2; grid-row: 2; }
+.layout.con-cerrada .card.act-card { grid-row: 1 / 3; }
+.layout.act-cerrada .bottom-console { grid-row: 1 / 3; }
+.act-card.recogida, .bottom-console.recogida { display: none; }
+.card, .bottom-console { border: 1px solid var(--contorno-suave); border-radius: 10px; box-shadow: var(--sombra); }
+.slots-card.card { border: 0; box-shadow: none; }
+.slots-card > .card-head { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); padding: 0 0 8px; min-height: 0; }
+.slots-card .chips { grid-column: 2; justify-content: center; }
+.slots-card .card-title { font-size: 13px; font-weight: 600; }
+.uc-dots { display: none; }
+.chip { height: 26px; background: var(--surface); }
+.chip[aria-pressed="true"] { background: var(--secondary-container); }
+
+/* Tarjetas de slot */
+/* Una sola columna: 16 botones largos y grandes, con scroll */
+.slots-panel { padding: 1px 6px 6px 1px; gap: 10px; overflow-y: auto; grid-template-columns: minmax(0, 1fr); grid-template-rows: none; grid-auto-rows: 84px; align-content: start; }
+.slot-card { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; align-items: center; column-gap: 16px; padding: 8px 18px 8px 16px; border: 1px solid var(--contorno-suave); border-left: 3px solid var(--primary); border-radius: 10px; background: var(--surface); box-shadow: var(--sombra); }
+.slot-card:hover { border-color: var(--contorno); border-left-color: var(--primary); box-shadow: 0 4px 14px rgba(16, 24, 40, .08); }
+.slot-card:active { transform: none; }
+.slot-icon { width: 44px; height: 44px; padding: 10px; border-radius: 10px; background: color-mix(in srgb, var(--acento, var(--primary)) 10%, transparent); color: var(--acento, var(--primary)); transition: background .25s, color .25s; }
+.slot-icon svg { width: 100%; height: 100%; }
+.slot-info { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.slot-top { justify-content: flex-start; gap: 7px; min-width: 0; }
+.slot-number { flex: none; font-size: 16px; font-weight: 600; letter-spacing: -.01em; color: var(--on-surface); }
+.slot-serial { min-width: 0; padding: 1px 6px; border-radius: 5px; background: color-mix(in srgb, var(--on-surface) 5%, transparent); color: var(--on-surface-variant); font: 500 11.5px/1.4 var(--mono); letter-spacing: 0; }
+.slot-pn { min-height: 0; font: 600 10.5px/1.35 var(--font); letter-spacing: .04em; text-transform: uppercase; color: var(--on-surface-variant); }
+.slot-pn:not(:empty)::before { opacity: 1; }
+.slot-pn:empty::before { content: "P/N —"; opacity: .7; }
+.slot-loop { display: block; font: 400 12.5px/1.35 var(--font); }
+.loop-bar { height: 5px; margin-top: 3px; }
+.slot-card:not(.active) .loop-bar { opacity: 1; }
+.slot-lado { display: flex; align-items: center; gap: 14px; }
+.slot-pill { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-width: 118px; height: 30px; padding: 0 12px; border: 1px solid var(--contorno-suave); border-radius: 999px; background: var(--surface-low); color: var(--on-surface-variant); font-size: 12px; font-weight: 600; letter-spacing: .02em; white-space: nowrap; transition: background .25s, color .25s, border-color .25s; }
+.slot-pill .slot-status, .slot-card.corriendo.active .slot-pill .slot-status { display: inline; height: auto; padding: 0; border-radius: 0; font: inherit; background: none !important; color: inherit !important; }
+.slot-led { flex: none; width: 8px; height: 8px; }
+.slot-tools { gap: 4px; }
+.slot-tools button { width: 32px; height: 32px; }
+.slot-tools button svg { width: 18px; height: 18px; }
+.term-btn { display: grid; visibility: hidden; }
+.slot-card.tiene-terminal .term-btn { visibility: visible; }
+
+/* Ventana angosta: los filtros se compactan para que quepan */
+@container (max-width: 780px) { .slots-card .card-title { display: none; } }
+@container (max-width: 620px) {
+  .chips { gap: 4px; flex-wrap: nowrap; }
+  .chip { padding: 0 7px; gap: 5px; font-size: 11.5px; }
+  .slot-card { column-gap: 12px; padding: 8px 12px; }
+  .slot-lado { gap: 6px; }
+}
+
+/* Estados: la orilla, el ícono y la píldora cambian de color */
+.slot-card.booting { --acento: #d48806; border-left-color: #d48806; background: var(--surface); }
+.slot-card.booting:hover { border-left-color: #d48806; }
+.slot-card.booting .slot-pill { color: #a86c00; background: rgba(212, 136, 6, .1); border-color: rgba(212, 136, 6, .45); }
+.slot-card.active { --acento: var(--success); border-left-color: var(--success); background: var(--surface); }
+.slot-card.active:hover { border-left-color: var(--success); }
+.slot-card.active .slot-pill, .slot-card.ficha-ok .slot-pill, .slot-card.terminado .slot-pill { color: var(--success); background: color-mix(in srgb, var(--success) 8%, transparent); border-color: color-mix(in srgb, var(--success) 35%, transparent); }
+.slot-card.error, .slot-card.caido { --acento: var(--error); border-left-color: var(--error); background: color-mix(in srgb, var(--error) 4%, var(--surface)); }
+.slot-card.error:hover, .slot-card.caido:hover { border-left-color: var(--error); }
+.slot-card.error .slot-pill, .slot-card.caido .slot-pill { color: var(--error); background: color-mix(in srgb, var(--error) 8%, transparent); border-color: color-mix(in srgb, var(--error) 35%, transparent); }
+.slot-card.terminado .slot-led, .slot-card.ficha-ok .slot-led { background: var(--success); }
+:root[data-theme="dark"] .slot-card.booting .slot-pill { color: var(--warning); }
+
+/* Paneles dentro de la tarjeta: acomodados a lo ancho porque la tarjeta es baja */
+.term-menu { flex-direction: row; flex-wrap: nowrap; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 10px; border: 1px solid var(--contorno); }
+.tm-btn { flex: 1 1 0; min-width: 0; height: 40px; padding: 0 10px; border-radius: 8px; font-size: 12.5px; white-space: nowrap; }
+.tm-btn.cancelar { justify-content: center; }
+.slot-config { flex-direction: row; flex-wrap: nowrap; align-items: center; gap: 16px; padding: 8px 18px; border-radius: 10px; border: 1px solid var(--contorno); }
+.sc-head { flex: none; align-items: center; gap: 10px; justify-content: flex-start; font-size: 13px; white-space: nowrap; }
+.sc-head b { font-size: 18px; }
+.sc-ok { order: 4; align-self: center; flex: none; height: 36px; padding: 0 18px; border-radius: 8px; font-size: 13px; font-weight: 600; }
+.slot-config input[type=range] { order: 3; flex: 1 1 0; min-width: 0; width: auto; height: 20px; }
 </style>
   <link rel="stylesheet" href="manual/manual.css">
 </head>
@@ -772,20 +912,19 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
   <header class="topbar">
     <div class="brand">
       <span class="brand-logo"><img src="icons/64x64.png" alt="" onerror="this.remove()"><span>ORT</span></span>
-      <span class="brand-name">ORT Engine</span>
-      <span class="brand-sub">Ghostfish Slot Manager</span>
     </div>
+    <nav class="nav-links" aria-label="Principal">
+      <button class="nav-link active" type="button" aria-current="page">Slots</button>
+      <button class="nav-link" type="button" onclick="abrirHistorial()">Historial</button>
+      <button id="btn-recursos" class="nav-link" type="button" title="Recursos del equipo (CPU, RAM, disco)" onclick="abrirRecursos()">Recursos</button>
+      <button id="btn-ntfy" class="nav-link" type="button" title="Notificaciones al celular" onclick="abrirNtfy()">Notificaciones<i class="punto-ntfy"></i></button>
+      <button id="nav-act" class="nav-link" type="button" title="Mostrar u ocultar la actividad (Ctrl+B)" onclick="plegar('act')">Actividad<span class="act-tab-badge" id="act-badge" hidden>0</span></button>
+      <button id="nav-con" class="nav-link" type="button" title="Mostrar u ocultar la terminal (Ctrl+J)" onclick="plegar('con')">Terminal<span class="uc-nuevas" id="uc-nuevas" hidden>0</span></button>
+    </nav>
     <div class="top-actions">
       <span class="version-chip" id="version">v—</span>
-      <button id="btn-recursos" class="icon-btn ripple" type="button" title="Recursos del equipo (CPU, RAM, disco)" aria-label="Recursos del equipo" onclick="abrirRecursos()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="12" width="4" height="8" rx="1"/><rect x="10" y="7" width="4" height="13" rx="1"/><rect x="17" y="3" width="4" height="17" rx="1"/></svg>
-      </button>
       <button id="btn-manual" class="icon-btn ripple" type="button" title="Manual de usuario (F1)" aria-label="Manual de usuario" onclick="abrirManual()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 5.5A1.5 1.5 0 0 1 3.5 4H9a3 3 0 0 1 3 3v13a2.5 2.5 0 0 0-2.5-2.5h-6A1.5 1.5 0 0 1 2 16z"/><path d="M22 5.5A1.5 1.5 0 0 0 20.5 4H15a3 3 0 0 0-3 3v13a2.5 2.5 0 0 1 2.5-2.5h6a1.5 1.5 0 0 0 1.5-1.5z"/></svg>
-      </button>
-      <button id="btn-ntfy" class="icon-btn ripple" type="button" title="Notificaciones al celular" aria-label="Notificaciones al celular" onclick="abrirNtfy()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
-        <i class="punto-ntfy"></i>
       </button>
       <button id="btn-update" class="icon-btn ripple" type="button" title="Buscar actualizaciones" aria-label="Buscar actualizaciones">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v5h-5"/></svg>
@@ -800,15 +939,17 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
 
   <main>
     <div class="head">
-      <div>
-        <h1>Slots</h1>
-        <p>Lectura de EEPROM y lanzamiento de regresión en 16 posiciones</p>
+      <div class="servidor revisando" id="servidor">
+        <span class="sv-datos">
+          <b class="sv-nombre" id="sv-nombre">—</b>
+          <span class="sv-ip" id="sv-ip">IP: —</span>
+        </span>
+        <span class="sv-estado"><i></i><span id="sv-estado">Revisando…</span></span>
+      </div>
+      <div class="head-titulo">
+        <h1>DRDT ENGINE</h1>
       </div>
       <div class="head-actions">
-        <button class="btn btn-outlined ripple" onclick="abrirHistorial()">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/><path d="M12 7v5l3 2"/></svg>
-          Historial
-        </button>
         <button class="btn btn-tonal ripple" onclick="openGlobalConfigModal()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>
           Loops
@@ -840,7 +981,7 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
       <button class="sc-cerrar" onclick="sistemaOculto = true; document.getElementById('sistema-caido').hidden = true;" title="Ocultar este aviso">Ocultar</button>
     </div>
     <div class="layout">
-      <section class="card">
+      <section class="card slots-card">
         <div class="card-head">
           <span class="card-title">Posiciones</span>
           <span id="chips-slot"></span>
@@ -860,7 +1001,6 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
         <!-- Pestaña cuando está recogida -->
         <button class="act-tab" type="button" onclick="plegar('act')" title="Mostrar actividad (Ctrl+B)" aria-label="Mostrar actividad">
           <span class="act-tab-flecha"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span>
-          <span class="act-tab-badge" id="act-badge" hidden>0</span>
           <span class="act-tab-txt">ACTIVIDAD</span>
           <span class="act-tab-tira" id="act-tira" aria-hidden="true"></span>
         </button>
@@ -870,7 +1010,6 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
         <div class="uc-head" ondblclick="if (!event.target.closest('button')) plegar('con')">
           <span class="uc-title"><span class="uc-dots"><i></i><i></i><i></i></span>Salida de terminal</span>
           <span class="uc-vista" id="uc-vista" aria-live="off"><span id="uc-ultima"></span><i class="uc-cursor"></i></span>
-          <span class="uc-nuevas" id="uc-nuevas" hidden>0</span>
           <span class="uc-der">
             <button class="uc-btn" onclick="consoleOutput.textContent=''">Limpiar</button>
             <button class="plegar plegar-con" type="button" onclick="plegar('con')" title="Recoger / mostrar la salida (Ctrl+J)" aria-label="Recoger o mostrar la salida de terminal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
@@ -1280,7 +1419,7 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
     }
 
     /* ---------- Paneles retráctiles: Actividad (Ctrl+B) y Salida de terminal (Ctrl+J) ---------- */
-    var paneles = { act: false, con: false };          // true = recogido
+    var paneles = { act: true, con: true };          // true = recogido
     try { paneles = { ...paneles, ...JSON.parse(localStorage.getItem('ort_paneles') || '{}') }; } catch (e) {}
     var pendientes = { act: 0, actErr: false, con: 0 };
     function aplicarPaneles(animar) {
@@ -1623,25 +1762,23 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
       card.setAttribute('aria-label', `Leer slot ${i}`);
       card.innerHTML = `
         <div class="slot-progress"><i></i></div>
-        <div class="slot-top">
-          <span class="slot-number">SLOT ${pad(i)}</span>
+        <div class="slot-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="7" rx="1.5"/><rect x="3" y="13" width="18" height="7" rx="1.5"/><path d="M7 7.5h.01M7 16.5h.01"/></svg></div>
+        <div class="slot-info">
+          <div class="slot-top">
+            <span class="slot-number">Slot ${pad(i)}</span>
+            <span class="slot-serial" id="serial-${i}">—</span>
+          </div>
+          <span class="slot-pn" id="part-${i}"></span>
+          <span class="slot-loop" id="loop-${i}"></span>
+          <div class="loop-bar" id="lbar-${i}"></div>
+        </div>
+        <div class="slot-lado">
+          <span class="slot-pill"><span class="slot-led" id="led-${i}"></span><span class="slot-status" id="status-${i}">Libre</span></span>
           <span class="slot-tools">
             <button class="term-btn" onclick="abrirMenuTerminal(${i}, event)" title="Terminal del slot ${i}" aria-label="Terminal del slot ${i}">${ICONO_TERMINAL}</button>
             <button class="config-toggle-btn" onclick="toggleConfigPanel(${i}, event)" title="Ajustar loops" aria-label="Ajustar loops del slot ${i}">${ICONO_AJUSTE}</button>
             <button class="gear-btn" onclick="abrirMenuTerminal(${i}, event)" title="Opciones del slot ${i}" aria-label="Opciones del slot ${i}">${ICONO_ENGRANE}</button>
-            <span class="slot-led" id="led-${i}"></span>
           </span>
-        </div>
-        <div class="slot-id">
-          <span class="slot-serial" id="serial-${i}">—</span>
-          <span class="slot-pn" id="part-${i}"></span>
-        </div>
-        <div>
-          <div class="slot-bottom">
-            <span class="slot-loop" id="loop-${i}"></span>
-            <span class="slot-status" id="status-${i}">Libre</span>
-          </div>
-          <div class="loop-bar" id="lbar-${i}"></div>
         </div>
 
         <div class="term-menu" id="tmenu-${i}" style="display:none" onclick="event.stopPropagation()">
@@ -2911,6 +3048,22 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
     document.querySelector('.brand-logo').title = 'Ver la bienvenida y revisar el sistema';
     document.querySelector('.brand-logo').addEventListener('click', iniciarBienvenida);
     ipcRenderer.invoke('config:leer').then((c) => { if (!c || !c.bienvenida) iniciarBienvenida(); }).catch(() => {});
+
+    /* ---------- Recuadro del servidor: nombre de la consola, IP y si está en línea (cada 5 s) ---------- */
+    async function revisarServidor() {
+      let r = null;
+      try { r = await ipcRenderer.invoke('servidor:info'); } catch (e) {}
+      const caja = document.getElementById('servidor');
+      const nombre = document.getElementById('sv-nombre');
+      nombre.textContent = (r && r.nombre) || '—';
+      nombre.title = nombre.textContent;
+      document.getElementById('sv-ip').textContent = 'IP: ' + ((r && r.ip) || 'no disponible');
+      const vivo = !!(r && r.ip && r.vivo);
+      caja.className = 'servidor ' + (vivo ? 'online' : 'offline');
+      document.getElementById('sv-estado').textContent = vivo ? 'En línea' : (r && !r.ip ? 'Sin IP' : 'Sin respuesta');
+    }
+    revisarServidor();
+    setInterval(revisarServidor, 5000);
 
     /* ---------- Efecto de onda al hacer clic (estilo Material) ---------- */
     document.addEventListener('pointerdown', (e) => {
