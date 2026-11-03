@@ -794,7 +794,7 @@ body:has(#act-card.alerta) #nav-act { color: var(--error); background: color-mix
 #nav-con .uc-nuevas { height: 18px; padding: 0 7px; font-size: 10px; background: var(--primary); color: var(--on-primary); }
 #nav-con .uc-nuevas:not([hidden]) { display: inline-flex; }
 #nav-act .act-tab-badge { min-width: 18px; height: 18px; font-size: 10px; }
-@media (max-width: 1040px) { .nav-link { padding: 0 9px; } .version-chip { display: none; } }
+@media (max-width: 1040px) { .nav-link { padding: 0 9px; } }
 .top-actions { justify-content: flex-end; gap: 8px; }
 .version-chip { height: 24px; margin-right: 2px; border-radius: 6px; }
 .top-actions .icon-btn { width: 34px; height: 34px; border: 1px solid var(--contorno-suave); background: var(--surface); color: var(--on-surface); }
@@ -932,6 +932,13 @@ main { gap: 10px; padding: 14px 16px 0; }
 @container (min-width: 1300px) {
   .loop-bar i { width: 15px; height: 26px; }
 }
+
+/* Firma */
+.firma { gap: 5px; font-size: 11.5px; padding: 4px 16px 5px; }
+.firma b.f-cafe { color: #8a4b1f; font-weight: 700; }
+:root[data-theme="dark"] .firma b.f-cafe { color: #ce9178; }
+.firma .corazon { width: 18px; height: 18px; }
+.corazon-v { fill: none; stroke: #fff; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
 </style>
   <link rel="stylesheet" href="manual/manual.css">
 </head>
@@ -1042,9 +1049,9 @@ main { gap: 10px; padding: 14px 16px 0; }
   </main>
 
   <footer class="firma">
-    Creado por <b>Philo ORT Team</b>
-    <svg class="corazon" viewBox="0 0 24 24" aria-label="con amor" role="img"><path d="M12 21s-7.5-4.6-9.6-9.3C.9 8.2 3 4.5 6.6 4.5c2.1 0 3.6 1.1 4.4 2.5.8-1.4 2.3-2.5 4.4-2.5 3.6 0 5.7 3.7 4.2 7.2C19.5 16.4 12 21 12 21z"/></svg>
-    <span class="firma-sep">·</span> <span id="version-pie"></span>
+    <b class="f-cafe">Software Engine</b>
+    <svg class="corazon" viewBox="0 0 24 24" aria-label="corazón con una V" role="img"><path d="M12 21s-7.5-4.6-9.6-9.300C.9 8.200 3 4.500 6.600 4.500c2.100 0 3.600 1.100 4.400 2.500.8-1.400 2.300-2.500 4.400-2.500 3.600 0 5.700 3.700 4.200 7.200C19.500 16.400 12 21 12 21z"/><path class="corazon-v" d="M8.300 8.500l3.700 7.500 3.700-7.500"/></svg>
+    <span id="version-pie" hidden></span>
   </footer>
 
   <!-- Aviso de actualización -->
