@@ -804,21 +804,11 @@ body:has(#act-card.alerta) #nav-act { color: var(--error); background: color-mix
 
 /* Título grande */
 main { gap: 10px; padding: 14px 16px 0; }
-.head { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(max-content, 1fr); padding: 0 0 10px; border-bottom: 1px solid var(--contorno); }
-.head-titulo { grid-column: 2; }
+.head { display: flex; flex-direction: column; align-items: center; flex-wrap: nowrap; gap: 8px; padding: 0; }
+.head-titulo { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.head-titulo::after { content: ""; display: block; width: calc(100% + 56px); height: 2px; border-radius: 2px; background: var(--contorno); }
 .head h1 { font-size: 36px; font-weight: 700; letter-spacing: .01em; line-height: 1.1; text-align: center; white-space: nowrap; }
-.servidor { grid-column: 1; justify-self: start; min-width: 0; max-width: 100%; min-height: 46px; display: flex; align-items: center; gap: 12px; padding: 4px 8px 4px 12px; border: 1px solid var(--contorno); border-radius: 13px; background: transparent; }
-.sv-datos { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
-.sv-nombre { font-size: 13px; font-weight: 600; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.sv-ip { font: 11.5px/1.3 var(--mono); color: var(--on-surface-variant); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.sv-estado { flex: none; display: inline-flex; align-items: center; gap: 7px; height: 30px; padding: 0 12px; border: 1px solid var(--contorno-suave); border-radius: 999px; background: var(--surface-low); color: var(--on-surface-variant); font-size: 12px; font-weight: 600; white-space: nowrap; }
-.sv-estado i { width: 8px; height: 8px; border-radius: 50%; background: #d48806; }
-.servidor.online .sv-estado { color: var(--success); background: color-mix(in srgb, var(--success) 8%, transparent); border-color: color-mix(in srgb, var(--success) 35%, transparent); }
-.servidor.online .sv-estado i { background: var(--success); }
-.servidor.offline .sv-estado { color: var(--error); background: color-mix(in srgb, var(--error) 8%, transparent); border-color: color-mix(in srgb, var(--error) 35%, transparent); }
-.servidor.offline .sv-estado i { background: var(--error); }
-.head-actions { grid-column: 3; justify-self: end; flex-wrap: nowrap; gap: 6px; padding: 5px; border: 1px solid var(--contorno); border-radius: 13px; background: transparent; }
-@media (max-width: 980px) { .head { column-gap: 8px; } .sv-estado { padding: 0 9px; gap: 5px; } .servidor { gap: 8px; padding-left: 9px; } .head h1 { font-size: 30px; } .head-actions { gap: 4px; padding: 4px; } .head-actions .btn { padding: 0 9px 0 7px; font-size: 12.5px; } }
+.head-actions { flex-wrap: nowrap; gap: 6px; padding: 5px; border: 1px solid var(--contorno); border-radius: 13px; background: transparent; }
 .btn { height: 34px; padding: 0 14px 0 11px; border-radius: 8px; font-weight: 600; }
 .btn, .btn-outlined, .btn-outlined.peligro { border: 1px solid var(--contorno); }
 .btn-filled { background: var(--primary); border-color: var(--primary); }
@@ -977,13 +967,6 @@ main { gap: 10px; padding: 14px 16px 0; }
 
   <main>
     <div class="head">
-      <div class="servidor revisando" id="servidor">
-        <span class="sv-datos">
-          <b class="sv-nombre" id="sv-nombre">—</b>
-          <span class="sv-ip" id="sv-ip">IP: —</span>
-        </span>
-        <span class="sv-estado"><i></i><span id="sv-estado">Revisando…</span></span>
-      </div>
       <div class="head-titulo">
         <h1>DRDT ENGINE</h1>
       </div>
@@ -3089,22 +3072,6 @@ main { gap: 10px; padding: 14px 16px 0; }
     document.querySelector('.brand-logo').title = 'Ver la bienvenida y revisar el sistema';
     document.querySelector('.brand-logo').addEventListener('click', iniciarBienvenida);
     ipcRenderer.invoke('config:leer').then((c) => { if (!c || !c.bienvenida) iniciarBienvenida(); }).catch(() => {});
-
-    /* ---------- Recuadro del servidor: nombre de la consola, IP y si está en línea (cada 5 s) ---------- */
-    async function revisarServidor() {
-      let r = null;
-      try { r = await ipcRenderer.invoke('servidor:info'); } catch (e) {}
-      const caja = document.getElementById('servidor');
-      const nombre = document.getElementById('sv-nombre');
-      nombre.textContent = (r && r.nombre) || '—';
-      nombre.title = nombre.textContent;
-      document.getElementById('sv-ip').textContent = 'IP: ' + ((r && r.ip) || 'no disponible');
-      const vivo = !!(r && r.ip && r.vivo);
-      caja.className = 'servidor ' + (vivo ? 'online' : 'offline');
-      document.getElementById('sv-estado').textContent = vivo ? 'En línea' : (r && !r.ip ? 'Sin IP' : 'Sin respuesta');
-    }
-    revisarServidor();
-    setInterval(revisarServidor, 5000);
 
     /* ---------- Efecto de onda al hacer clic (estilo Material) ---------- */
     document.addEventListener('pointerdown', (e) => {
