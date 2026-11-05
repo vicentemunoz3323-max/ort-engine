@@ -6,7 +6,7 @@
    - Las contraseñas se revisan con "su" dentro de una pty de Python. No se guardan en ningún lado
      y nunca van en los argumentos de un comando (se pasan por stdin).
    - Para que nadie se quede encerrado:
-     · antes de bloquear se pide y se revisa la contraseña; si no se puede revisar, no se bloquea
+     · antes de bloquear se revisa que "su" pida contraseña; si no, no se bloquea
      · si la pantalla no carga en 10 s, se traba o se cae, el bloqueo se quita solo
      · si al desbloquear "su" no funciona, el bloqueo se quita y se avisa
    - Lo que pasa queda en <carpeta temporal>/ort-engine-<uid>/lock.log (nunca la contraseña).
@@ -20,6 +20,7 @@ const { spawn, exec } = require('child_process');
 const VERIFICADOR = `
 import os, pty, re, select, sys, time
 usuario = sys.argv[1]
+solo_probar = len(sys.argv) > 2 and sys.argv[2] == "probar"
 pw = sys.stdin.readline().rstrip("\\n")
 pid, fd = pty.fork()
 if pid == 0:
@@ -38,12 +39,16 @@ while time.time() < fin:
     if not d: break
     buf += d
     if not enviada and re.search(rb"(?i)(password|contrase)", buf):
+        if solo_probar:
+            os.kill(pid, 9); sys.exit(0)
         time.sleep(0.15); os.write(fd, (pw + "\\n").encode()); enviada = True; buf = b""
 try:
     _, st = os.waitpid(pid, 0)
 except ChildProcessError:
     sys.exit(3)
 code = os.WEXITSTATUS(st) if os.WIFEXITED(st) else 1
+if enviada and code != 0:
+    sys.stderr.write(buf.decode("utf-8", "replace").replace(pw, "***")[-200:])
 sys.exit(code if enviada else 3)
 `;
 
@@ -61,21 +66,25 @@ function noNewPrivs() {
 }
 const SYSTEMD_RUN = '/usr/bin/systemd-run';
 
-function probarUsuario(usuario, pass) {
+function correr(base, pass) {
   return new Promise((resolve) => {
-    let cmd = ['python3', '-c', VERIFICADOR, usuario];
-    if (noNewPrivs() && fs.existsSync(SYSTEMD_RUN)) cmd = [SYSTEMD_RUN, '--user', '--pipe', '--wait', '--quiet', '--collect', '--', ...cmd];
-    let p, fin = false;
-    const listo = (c) => { if (!fin) { fin = true; clearTimeout(t); resolve(c); } };
+    const cmd = noNewPrivs() && fs.existsSync(SYSTEMD_RUN) ? [SYSTEMD_RUN, '--user', '--pipe', '--wait', '--quiet', '--collect', '--', ...base] : base;
+    let p, fin = false, err = '';
+    const listo = (c) => { if (!fin) { fin = true; clearTimeout(t); resolve({ codigo: c, salida: (pass ? err.split(pass).join('***') : err).trim().slice(-200) }); } };
     const t = setTimeout(() => { try { p.kill('SIGKILL'); } catch (e) {} listo(3); }, 15000);
-    try { p = spawn(cmd[0], cmd.slice(1), { stdio: ['pipe', 'ignore', 'ignore'] }); }
-    catch (e) { return listo(3); }
+    try { p = spawn(cmd[0], cmd.slice(1), { stdio: ['pipe', 'ignore', 'pipe'], env: { ...process.env, LC_ALL: 'C' } }); }
+    catch (e) { err = e.message; return listo(3); }
+    p.stderr.on('data', (d) => { err += d; });
     p.stdin.on('error', () => {});
     p.stdin.write(pass + '\n'); p.stdin.end();
-    p.on('error', () => listo(3));
+    p.on('error', (e) => { err = e.message; listo(3); });
     p.on('close', (c) => listo(c === null ? 1 : c));
   });
 }
+const conSu = (usuario, pass) => correr(['python3', '-c', VERIFICADOR, usuario], pass);
+const conSudo = (pass) => correr(['sudo', '-k', '-S', '-p', '', '-v'], pass);
+// ¿"su" pide contraseña en esta PC? (no se envía ninguna ni cuenta como intento fallido)
+const suPideContrasena = async (usuario) => (await correr(['python3', '-c', VERIFICADOR, usuario, 'probar'], '')).codigo === 0;
 
 // Se acepta la contraseña del usuario de la PC: el que abrió la app
 function cuentas() {
@@ -88,11 +97,21 @@ async function verificar(pass) {
   if (typeof pass !== 'string' || !pass || pass.length > 300 || /[\r\n]/.test(pass)) return { ok: false, error: 'Escribe la contraseña' };
   const lista = cuentas();
   if (!lista.length) return { ok: false, error: 'No se pudo revisar la contraseña: no hay un usuario válido.' };
-  const r = await probarUsuario(lista[0], pass);
-  registrar(`revisión de contraseña de ${lista[0]}: código ${r}`);
-  if (r === 0) return { ok: true, usuario: lista[0] };
-  if (r === 3) return { ok: false, sinRevisar: true, error: 'No se pudo revisar la contraseña (su no la pidió).' };
-  return { ok: false, error: 'Contraseña incorrecta' };
+  // Sirve por cualquiera de los dos caminos: "su" o "sudo"
+  return new Promise((resolve) => {
+    let listo = false, faltan = 2, su = null;
+    const fin = (nombre, r) => {
+      registrar(`revisión de contraseña de ${lista[0]} con ${nombre}: código ${r.codigo}${r.salida ? ' · ' + r.salida : ''}`);
+      if (listo) return;
+      if (nombre === 'su') su = r.codigo;
+      if (r.codigo === 0) { listo = true; return resolve({ ok: true, usuario: lista[0] }); }
+      if (--faltan === 0) resolve(su === 3
+        ? { ok: false, sinRevisar: true, error: 'No se pudo revisar la contraseña (su no la pidió).' }
+        : { ok: false, error: 'Contraseña incorrecta' });
+    };
+    conSu(lista[0], pass).then((r) => fin('su', r));
+    conSudo(pass).then((r) => fin('sudo', r));
+  });
 }
 
 let ventanas = [];
@@ -160,16 +179,15 @@ function revisarHerramientas() {
 function iniciar(opc = {}) {
   if (opc.avisar) avisar = opc.avisar;
   ipcMain.handle('auth:verificar', (_e, pass) => verificar(pass));
-  ipcMain.handle('lock:activar', async (_e, datos, pass) => {
+  ipcMain.handle('lock:activar', async (_e, datos) => {
     if (activo) return { ok: true };
     const d = datos || {};
     letrero = { titulo: texto(d.titulo, 60), subtitulo: texto(d.subtitulo, 90), encargado: texto(d.encargado, 50) };
     if (process.getuid && process.getuid() === 0) return { ok: false, error: 'La app corre como root: no se podría revisar la contraseña para quitar el bloqueo.' };
     // Sin estas herramientas no se podría desbloquear: mejor no bloquear
     if (!(await revisarHerramientas())) return { ok: false, error: 'Faltan "su" o "python3": no se podría quitar el bloqueo.' };
-    // La misma revisión que se usará para desbloquear: si no funciona aquí, no se bloquea
-    const previa = await verificar(pass);
-    if (!previa.ok) return { ok: false, error: previa.error };
+    const lista = cuentas();
+    if (!lista.length || !(await suPideContrasena(lista[0]))) return { ok: false, error: 'En esta PC "su" no pide contraseña: no se podría quitar el bloqueo.' };
     activo = true;
     registrar('pantalla bloqueada');
     crearVentanas();
@@ -201,4 +219,4 @@ function iniciar(opc = {}) {
   app.on('before-quit', () => { activo = false; cerrarVentanas(); });
 }
 
-module.exports = { iniciar, verificar, _VERIFICADOR: VERIFICADOR };
+module.exports = { iniciar, verificar, suPideContrasena, _VERIFICADOR: VERIFICADOR };

@@ -1115,7 +1115,7 @@ main { gap: 10px; padding: 14px 16px 0; }
   <div class="modal-overlay" id="lockModal" onclick="if (event.target === this) cerrarLock()">
     <div class="modal-content lk" role="dialog" aria-modal="true" aria-labelledby="lk-title">
       <h2 id="lk-title">Bloquear la pantalla</h2>
-      <p>Para quitar el bloqueo se pide la contraseña del usuario de esta PC.</p>
+      <p>Para desbloquear se pedirá la contraseña del usuario de esta PC.</p>
       <div class="lk-rapidos" aria-label="Letreros rápidos">
         <button type="button" class="chip" data-t="Pruebas en proceso" data-s="No tocar ni retirar unidades">Pruebas</button>
         <button type="button" class="chip" data-t="Equipo en mantenimiento" data-s="No ingresar unidades">Mantenimiento</button>
@@ -1125,7 +1125,6 @@ main { gap: 10px; padding: 14px 16px 0; }
       <label class="campo"><span>Letrero grande</span><input id="lk-titulo" type="text" maxlength="60" placeholder="Pruebas en proceso"></label>
       <label class="campo"><span>Segundo letrero <em>(opcional)</em></span><input id="lk-subtitulo" type="text" maxlength="90" placeholder="No tocar ni retirar unidades"></label>
       <label class="campo"><span>Nombre del encargado</span><input id="lk-encargado" type="text" maxlength="50" placeholder="Nombre y apellido"></label>
-      <label class="campo"><span>Contraseña del usuario de la PC <em>(se revisa antes de bloquear)</em></span><input id="lk-pass" type="password" autocomplete="off" placeholder="••••••••"></label>
       <div class="pin-error" id="lk-error" role="alert"></div>
       <div class="pin-acciones">
         <button class="btn btn-text ripple" type="button" onclick="cerrarLock()">Cancelar</button>
@@ -3176,27 +3175,23 @@ main { gap: 10px; padding: 14px 16px 0; }
       if (!g.titulo && !g.subtitulo) { g.titulo = 'Pruebas en proceso'; g.subtitulo = 'No tocar ni retirar unidades'; }
       for (const k of LK_CAMPOS) document.getElementById('lk-' + k).value = g[k] || '';
       document.getElementById('lk-error').textContent = '';
-      document.getElementById('lk-pass').value = '';
       document.getElementById('lockModal').style.display = 'flex';
-      setTimeout(() => { const e = document.getElementById('lk-encargado'); (e.value ? document.getElementById('lk-pass') : e).focus(); }, 50);
+      setTimeout(() => { const e = document.getElementById('lk-encargado'); (e.value ? document.getElementById('lk-titulo') : e).focus(); }, 50);
     }
-    function cerrarLock() { document.getElementById('lk-pass').value = ''; document.getElementById('lockModal').style.display = 'none'; }
+    function cerrarLock() { document.getElementById('lockModal').style.display = 'none'; }
     async function activarLock() {
       const datos = {};
       for (const k of LK_CAMPOS) datos[k] = document.getElementById('lk-' + k).value.trim();
       if (!datos.titulo) { document.getElementById('lk-error').textContent = 'Escribe el letrero grande'; return document.getElementById('lk-titulo').focus(); }
-      const pass = document.getElementById('lk-pass');
-      if (!pass.value) { document.getElementById('lk-error').textContent = 'Escribe la contraseña del usuario de la PC'; return pass.focus(); }
       try { localStorage.setItem('ort_lock', JSON.stringify(datos)); } catch (e) {}
       const b = document.getElementById('lk-ok');
       if (b.disabled) return;
       b.disabled = true; b.textContent = 'Revisando…';
       document.getElementById('lk-error').textContent = '';
       let r = null;
-      try { r = await ipcRenderer.invoke('lock:activar', datos, pass.value); } catch (e) {}
+      try { r = await ipcRenderer.invoke('lock:activar', datos); } catch (e) {}
       b.disabled = false; b.textContent = 'Bloquear';
       if (r && r.ok) return cerrarLock();
-      pass.value = ''; pass.focus();
       document.getElementById('lk-error').textContent = (r && r.error) || 'No se pudo bloquear. Intenta de nuevo.';
     }
     document.querySelectorAll('.lk-rapidos .chip').forEach((c) => c.addEventListener('click', () => {
