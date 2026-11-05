@@ -938,6 +938,13 @@ main { gap: 10px; padding: 14px 16px 0; }
 .firma .corazon { width: 18px; height: 18px; }
 .corazon-v { fill: none; stroke: #fff; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
 
+/* Unidad que falló y ya no tiene consola */
+.slot-card.ficha-mal { --acento: var(--error); border-left-color: var(--error); background: color-mix(in srgb, var(--error) 4%, var(--surface)); }
+.slot-card.ficha-mal:hover { border-left-color: var(--error); }
+.slot-card.ficha-mal .slot-pill { color: var(--error); }
+.slot-card.ficha-mal .slot-led { background: var(--error); }
+.slot-card.ficha-mal .slot-loop { color: var(--error); font-weight: 600; }
+
 /* ===== Temas extra (usan la base oscura) ===== */
 :root[data-theme="dark"][data-tono="cafe"] {
   --primary: #d9a66c; --on-primary: #2a1a0c; --primary-container: #5a3d22; --on-primary-container: #f5dfc4;
@@ -1158,6 +1165,7 @@ main { gap: 10px; padding: 14px 16px 0; }
           <label><input type="checkbox" id="nf-entrada"> Entra una unidad <em>(slot, serial, P/N y loops)</em></label>
           <label><input type="checkbox" id="nf-fin"> Una unidad termina todos sus loops</label>
           <label><input type="checkbox" id="nf-detenido"> Una unidad se detiene antes de terminar</label>
+          <label><input type="checkbox" id="nf-fallo"> Una unidad falla y se cierra su consola <em>(loop con pocos sleeps)</em></label>
         </fieldset>
 
         <div class="nf-preview">
@@ -2293,7 +2301,8 @@ main { gap: 10px; padding: 14px 16px 0; }
 
     // ¿Cómo va / cómo terminó la corrida, según la salida de la terminal?
     // Así trabaja ot_regression.py (visto en la consola):
-    //   Execution N started successfully          ← arranca el loop N (8 h)
+    //   Execution N started successfully          ← arranca una ejecución; el script cuenta desde 1
+    //                                                (Execution 1 = loop 0 de la app, monitor_slots.js ya lo convierte)
     //   Station is active. Sleeping 1200 seconds… ← cada 20 min mientras la estación prueba (~23 veces)
     //   Station is idle.                          ← terminó ese loop
     //   Starting process station … / Execution N+1 started successfully …
@@ -2391,6 +2400,7 @@ main { gap: 10px; padding: 14px 16px 0; }
 
       card.classList.toggle('corriendo', !!c);
       if (!c && fichas[i] && fichas[i].detalle && fichas[i].estado === 'cerrada' && slotStates[i] === 'idle') {
+        card.classList.toggle('ficha-mal', fichas[i].status === 'Falló');
         ponerHTML(txt, escapar(fichas[i].detalle));
         for (const s of segs) ponerSeg(s, fichas[i].status === 'Completado' ? 'hecho' : '');
         return;
@@ -2523,7 +2533,22 @@ main { gap: 10px; padding: 14px 16px 0; }
       const c = corridas[i];
       if (!c || !monitorDeCorrida(i)) return;
       const total = totalLoops(c.loops);
-      const nuevoError = (m.estado === 'slot' || m.estado === 'sistema') && m.error &&
+      // Loop con muy pocos sleeps: el proceso principal ya está cerrando la consola
+      if (m.prematura && !c.avisoPrematura) {
+        const f = m.prematura;
+        const motivo = `La ejecución ${f.ejecucion} terminó antes de tiempo: solo ${f.sleeps} sleeps. Se cerró la consola.`;
+        const extra = f.siguiente ? ` Alcanzó a arrancar la ejecución ${f.siguiente}.` : '';
+        c.avisoPrematura = true;
+        c.cerradoHist = true;      // ya queda registrada aquí como falla, no como "detenida"
+        guardarCorridas();
+        guardarRegistro({ id: c.hid, estado: 'caido', salida: f.ts, motivo: motivo + extra, loopAlcanzado: f.loop, incidentes: m.incidentes, ultimoError: m.error ? m.error.linea : motivo,
+          horasCorridas: +((f.ts - c.inicio) / 3600000).toFixed(2) });
+        tele(`Slot ${pad(i)}: <b>falló</b>. ${escapar(motivo + extra)}`, 'err');
+        mostrarToast({ titulo: `Slot ${pad(i)} falló`, msg: `${c.serial}: ${motivo}${extra}`, tipo: 'err', autoOcultar: 20000 });
+        try { new Notification(`ORT Engine · Slot ${pad(i)} falló`, { body: `${c.serial}: ${motivo}${extra}` }); } catch (e) {}
+        notificar('fallo', { title: `Slot ${pad(i)} · FALLÓ`, message: `${c.serial} · P/N ${c.pn}\n${motivo}${extra}`, tags: ['rotating_light'], priority: 5 });
+      }
+      const nuevoError = !m.prematura && (m.estado === 'slot' || m.estado === 'sistema') && m.error &&
         !(antes && antes.estado === m.estado && antes.error && antes.error.ts === m.error.ts && antes.error.linea === m.error.linea);
       if (m.loop !== null && (!antes || antes.loop !== m.loop) && m.estado === 'corriendo') {
         if (!inicial) tele(`Slot ${pad(i)}: inició el loop <b>${m.loop}/${c.loops}</b>.`, 'ok');
@@ -2586,7 +2611,8 @@ main { gap: 10px; padding: 14px 16px 0; }
         const total = totalLoops(c.loops), t = Date.now() - c.inicio;
         const m = monitorDeCorrida(i) ? monitor[i] : null;
         const f = m ? finDeCorrida(c, m) : null;
-        if (f && f.terminado) { status = 'Completado'; detalle = `✓ Completó ${total} ${total === 1 ? 'loop' : 'loops'}`; }
+        if (m && m.prematura) { status = 'Falló'; detalle = `⚠ Loop ${m.prematura.loop}/${c.loops}: ${m.prematura.sleeps} sleeps`; }
+        else if (f && f.terminado) { status = 'Completado'; detalle = `✓ Completó ${total} ${total === 1 ? 'loop' : 'loops'}`; }
         else if (f && f.anticipada) { status = 'Falló'; detalle = `⚠ Terminó antes de tiempo en loop ${f.actual}/${c.loops}`; }
         else if (m && (m.estado === 'slot' || m.estado === 'sistema')) { status = 'Caído'; detalle = `⚠ ${m.estado === 'sistema' ? 'Sistema caído' : 'Slot caído'} en loop ${m.loop ?? 0}/${c.loops}`; }
         else if (m && m.loop !== null) detalle = `Llegó al loop ${m.loop}/${c.loops} · ${(t / 3600000).toFixed(1)} h`;
@@ -2619,7 +2645,7 @@ main { gap: 10px; padding: 14px 16px 0; }
       }
       // terminal cerrada / completado: se queda la información de la unidad
       slotStates[i] = 'idle';
-      ponerClase(card, 'slot-card con-ficha' + (f.status === 'Completado' ? ' ficha-ok' : ''));
+      ponerClase(card, 'slot-card con-ficha' + (f.status === 'Completado' ? ' ficha-ok' : f.status === 'Falló' ? ' ficha-mal' : ''));
       st.textContent = f.status || 'Cerrada';
       document.getElementById(`serial-${i}`).textContent = f.serial || '—';
       document.getElementById(`part-${i}`).textContent = f.pn || '';
@@ -2749,7 +2775,7 @@ main { gap: 10px; padding: 14px 16px 0; }
         if (r && !r.ok && !r.omitido) tele(`No se pudo enviar la notificación (${escapar(r.mensaje || 'error')}). Se reintentará.`, 'warn');
       }).catch(() => {});
     }
-    const camposNtfy = ['activo', 'servidor', 'tema', 'token', 'entrada', 'fin', 'detenido'];
+    const camposNtfy = ['activo', 'servidor', 'tema', 'token', 'entrada', 'fin', 'detenido', 'fallo'];
     function leerFormNtfy() {
       const n = {};
       for (const k of camposNtfy) {
@@ -2770,7 +2796,7 @@ main { gap: 10px; padding: 14px 16px 0; }
     async function abrirNtfy() {
       let c = null;
       try { c = await ipcRenderer.invoke('config:leer'); } catch (e) {}
-      const n = (c && c.ntfy) || { activo: true, servidor: 'https://ntfy.sh', tema: 'drdt', token: '', entrada: true, fin: false, detenido: false };
+      const n = (c && c.ntfy) || { activo: true, servidor: 'https://ntfy.sh', tema: 'drdt', token: '', entrada: true, fin: false, detenido: false, fallo: true };
       for (const k of camposNtfy) {
         const el = document.getElementById('nf-' + k);
         if (el.type === 'checkbox') el.checked = !!n[k]; else el.value = n[k] || '';

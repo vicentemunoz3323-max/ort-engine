@@ -4,7 +4,10 @@
    Cada terminal de slot guarda todo lo que imprime en un archivo
    (slot-01.log …) sin cambiar lo que ves en la terminal. Aquí se lee ese archivo en vivo:
 
-   - "Execution N started successfully"  → el slot va en el loop N
+   - "Execution N started successfully"  → empieza una ejecución. El script cuenta desde 1 y la app
+     desde 0: "Execution 1" es el loop 0, "Execution 8" es el loop 7
+   - "Station is active. Sleeping…"       → se cuenta; un loop bueno tiene más de 20 (uno cada 20 min)
+   - "Station is idle" con pocos sleeps   → el loop acabó antes de tiempo: se cierra la consola
    - un error con 8090 / localhost        → SISTEMA CAÍDO (el servicio de la PC)
    - "refused", Traceback, ERROR, FAIL…   → SLOT CAÍDO
    - el script terminó (slot-01.exit)     → código 0 = terminó bien, otro = caído
@@ -31,14 +34,21 @@ const RX_SLOT = [
 const RX_NO_ES_FALLA = /\b(0|no|zero|sin)\s+(errors?|failures?|failed|fails?|errores?|fallas?)\b|\b(errors?|failures?|failed|fails?|errores?|fallas?)\s*[:=]\s*0\b|\bpass(ed)?\b.*\b0\s+fail/i;
 const RX_ANSI = /\x1b\[[0-9;?]*[ -\/]*[@-~]|\x1b\][^\x07]*(?:\x07|\x1b\\)|\x1b[()][A-Za-z0-9]|\r/g;
 
+const RX_SLEEP = /station is active\b.*\bsleeping\b/i;
+const RX_IDLE = /station is idle\b/i;
+// Menos de estos sleeps en una ejecución = la unidad falló. Un loop bueno trae más de 20 y uno fallido 3 o 4.
+const MIN_SLEEPS = 15;
+
 const MAX_LINEAS = 40;
 let DIR = null;
 let avisar = () => {};
+let alPrematura = () => {};
 const est = {};            // slot -> estado
 
 function configurar(opc) {
   DIR = opc.dir;
   if (opc.avisar) avisar = opc.avisar;
+  if (opc.alPrematura) alPrematura = opc.alPrematura;
 }
 const pad = (n) => String(n).padStart(2, '0');
 const archivoLog = (s) => path.join(DIR, `slot-${pad(s)}.log`);
@@ -62,12 +72,24 @@ function cargarEstado(s) {
     if (!e || e.slot !== s || typeof e.offset !== 'number') return null;
     const st = fs.statSync(archivoLog(s));
     if (st.size < e.offset) return null;          // el log es de otra corrida (más chico que lo ya leído)
-    return { ...nuevo(s), ...e };
+    const r = { ...nuevo(s), ...e };
+    if (e.v !== VERSION_ESTADO) {
+      // Corrida que venía de una versión anterior: el loop estaba guardado contando desde 1 y sus
+      // sleeps no se contaron, así que este loop no se revisa (para no cerrar una unidad buena).
+      const ult = r.ejecuciones.length ? r.ejecuciones[r.ejecuciones.length - 1].n : null;
+      r.loop = ult === null ? null : aLoop(ult);
+      r.sleeps = null;
+      r.v = VERSION_ESTADO;
+    }
+    return r;
   } catch (err) { return null; }
 }
 
+const VERSION_ESTADO = 2;
+const aLoop = (n) => Math.max(0, n - 1);    // "Execution 1" del script = loop 0 de la app
+
 function nuevo(s) {
-  return { slot: s, offset: 0, resto: '', loop: null, loopTs: null, ejecuciones: [], estado: 'esperando',
+  return { v: VERSION_ESTADO, slot: s, offset: 0, resto: '', loop: null, loopTs: null, ejecuciones: [], sleeps: 0, prematura: null, estado: 'esperando',
     error: null, incidentes: [], exit: null, exitTs: null, lineas: [], cambio: Date.now() };
 }
 
@@ -109,12 +131,35 @@ function procesarLinea(e, linea) {
   if (/^Script (started|done) on /.test(t)) return false;      // encabezado que agrega "script"
   e.lineas.push(t.slice(0, 400));
   if (e.lineas.length > MAX_LINEAS) e.lineas.shift();
+  // Ya se detectó la falla: solo se anota si alcanzó a arrancar otra ejecución antes de cerrar la consola
+  if (e.prematura) {
+    const m = t.match(RX_EJECUCION);
+    if (m && !e.prematura.siguiente) { e.prematura.siguiente = parseInt(m[1], 10); return true; }
+    return false;
+  }
+  if (RX_SLEEP.test(t)) {
+    if (e.loop !== null && e.sleeps !== null) e.sleeps++;
+    return false;
+  }
+  if (RX_IDLE.test(t)) {
+    if (e.loop !== null && e.sleeps !== null && e.sleeps < MIN_SLEEPS) {
+      const ult = e.ejecuciones[e.ejecuciones.length - 1];
+      const ahora = Date.now();
+      e.prematura = { ejecucion: ult ? ult.n : e.loop + 1, loop: e.loop, sleeps: e.sleeps, ts: ahora, siguiente: null };
+      e.estado = 'slot';
+      e.error = { tipo: 'slot', linea: `La ejecución ${e.prematura.ejecucion} terminó antes de tiempo: solo ${e.sleeps} sleeps`, ts: ahora, repeticiones: 1, loop: e.loop };
+      e.incidentes.push({ tipo: 'slot', linea: e.error.linea, ts: ahora, loop: e.loop });
+      if (e.incidentes.length > 30) e.incidentes.shift();
+      return true;
+    }
+    return false;
+  }
   const c = clasificar(t);
   if (!c) return false;
   const ahora = Date.now();
   if (c.tipo === 'ejecucion') {
     const recuperado = e.estado === 'slot' || e.estado === 'sistema';
-    e.loop = c.n; e.loopTs = ahora;
+    e.loop = aLoop(c.n); e.loopTs = ahora; e.sleeps = 0;
     e.ejecuciones.push({ n: c.n, ts: ahora });
     e.estado = 'corriendo';
     e.recuperado = recuperado ? { de: e.error, ts: ahora } : null;
@@ -153,7 +198,9 @@ function leer(s) {
       const partes = txt.split(/\n/);
       e.resto = partes.pop();
       if (e.resto.length > 8000) { partes.push(e.resto); e.resto = ''; }
+      const yaPrematura = !!e.prematura;
       for (const l of partes) for (const sub of l.split('\r')) if (procesarLinea(e, sub)) cambio = true;
+      if (e.prematura && !yaPrematura) { guardarEstado(s); try { alPrematura(s, e.prematura); } catch (err) {} }
     }
   } catch (err) { /* todavía no hay log */ }
   // 2) ¿terminó el script?
@@ -206,7 +253,8 @@ function iniciar() {
     if (previo) est[s] = previo;
     leer(s);
   }
-  timer = setInterval(() => { for (let s = 1; s <= 16; s++) if (est[s]) leer(s); }, 1500);
+  // Cada 0.5 s: entre más rápido se vea "Station is idle", menos chance de que arranque otra ejecución
+  timer = setInterval(() => { for (let s = 1; s <= 16; s++) if (est[s]) leer(s); }, 500);
 }
 
 module.exports = { configurar, iniciar, prepararCorrida, envolver, todos, leer, clasificar, _est: est };

@@ -226,7 +226,9 @@ const marcaAdoptada = (clave) => path.join(DIR_TMP, `${clave}.adoptada`);
 const monitorSlots = require('./monitor_slots.js');
 monitorSlots.configurar({
   dir: DIR_TMP,
-  avisar: (slot, estado) => { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('slot:monitor', { slot, estado }); }
+  avisar: (slot, estado) => { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('slot:monitor', { slot, estado }); },
+  // La unidad falló (loop con muy pocos sleeps): se cierra su consola para que no acumule más ejecuciones
+  alPrematura: (slot) => setImmediate(() => cerrarSlot(slot))
 });
 monitorSlots.iniciar();
 ipcMain.handle('slot:monitor-todos', () => monitorSlots.todos());
@@ -339,38 +341,6 @@ ipcMain.handle('terminal:vivas', () => {
 
 ipcMain.handle('terminal:capacidad', () => revisarEnfoque());
 
-/* Recuadro del servidor: el nombre del prompt de la consola (usuario@equipo), la IP
-   de la interfaz principal (eno1 y, si no existe, sfc*) y si responde a ping. */
-const INTERFACES_PRINCIPALES = [/^eno1$/i, /^sfc/i];
-function ipPrincipal() {
-  const interfaces = os.networkInterfaces();
-  for (const patron of INTERFACES_PRINCIPALES) {
-    for (const [nombre, direcciones] of Object.entries(interfaces)) {
-      if (!patron.test(nombre)) continue;
-      const v4 = (direcciones || []).find((d) => (d.family === 'IPv4' || d.family === 4) && !d.internal);
-      if (v4) return v4.address;
-    }
-  }
-  return null;
-}
-function hacerPing(ip) {
-  return new Promise((resolve) => {
-    let listo = false;
-    const fin = (v) => { if (!listo) { listo = true; clearTimeout(limite); resolve(v); } };
-    const limite = setTimeout(() => { try { proc.kill(); } catch (e) {} fin(false); }, 4000);
-    let proc;
-    try { proc = spawn('ping', ['-c', '1', '-W', '2', ip]); } catch (e) { return fin(false); }
-    proc.on('error', () => fin(false));
-    proc.on('close', (code) => fin(code === 0));
-  });
-}
-ipcMain.handle('servidor:info', async () => {
-  let usuario = '';
-  try { usuario = os.userInfo().username; } catch (e) {}
-  const ip = ipPrincipal();
-  return { nombre: `${usuario}@${os.hostname()}`, ip, vivo: ip ? await hacerPing(ip) : false };
-});
-
 // Traer al frente la terminal del slot
 ipcMain.handle('terminal:mostrar', async (_e, slot) => {
   if (!leerPid(claveSlot(slot))) return { ok: false, motivo: 'cerrada' };
@@ -384,16 +354,17 @@ ipcMain.handle('terminal:mostrar', async (_e, slot) => {
 });
 
 // Cerrar la terminal del slot (y todo lo que esté corriendo dentro)
-ipcMain.handle('terminal:cerrar', (_e, slot) => {
+function cerrarSlot(slot) {
   const pid = leerPid(claveSlot(slot));
-  if (!pid) return { ok: true, yaCerrada: true };
+  if (!pid) return Promise.resolve({ ok: true, yaCerrada: true });
   return new Promise((resolve) => {
     exec(`pkill -HUP -s ${pid}; sleep 0.5; pkill -KILL -s ${pid}`, () => {
       try { fs.unlinkSync(pidFile(claveSlot(slot))); } catch (e) {}
       resolve({ ok: true });
     });
   });
-});
+}
+ipcMain.handle('terminal:cerrar', (_e, slot) => cerrarSlot(slot));
 
 /* ---------- Detectar consolas que ya están corriendo ----------
    Sirve cuando abres la app y ya hay consolas de slots trabajando: las abrió una versión
@@ -715,7 +686,7 @@ ipcMain.handle('historial:carpeta', () => {
    Se configuran desde la campana de la app. Se guardan en ~/.config/ort-engine/config.json */
 const archivoConfig = () => path.join(app.getPath('userData'), 'config.json');
 const CONFIG_BASE = {
-  ntfy: { activo: true, servidor: 'https://ntfy.sh', tema: 'drdt', token: '', entrada: true, fin: false, detenido: false }
+  ntfy: { activo: true, servidor: 'https://ntfy.sh', tema: 'drdt', token: '', entrada: true, fin: false, detenido: false, fallo: true }
 };
 
 function leerConfig() {
