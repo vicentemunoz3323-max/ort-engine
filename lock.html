@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>DRDT Engine · Bloqueado</title>
+<style>
+@font-face { font-family: "ORT Inter"; src: url("fonts/Inter-Regular.otf") format("opentype"); font-weight: 400; }
+@font-face { font-family: "ORT Inter"; src: url("fonts/Inter-SemiBold.otf") format("opentype"); font-weight: 600; }
+@font-face { font-family: "ORT Inter"; src: url("fonts/Inter-Bold.otf") format("opentype"); font-weight: 700; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 100%; height: 100%; overflow: hidden; user-select: none; cursor: default; }
+body { position: relative; font-family: "ORT Inter", Arial, sans-serif; color: #eaf6ff; background: linear-gradient(180deg, #0b6d93 0%, #084f77 34%, #06345a 68%, #041f3b 100%); }
+.rayos { position: absolute; inset: -20% -10% 30%; background: repeating-linear-gradient(105deg, rgba(190, 240, 255, .09) 0 70px, transparent 70px 210px); -webkit-mask-image: linear-gradient(180deg, #000, transparent); pointer-events: none; }
+.fondo { position: absolute; left: 0; right: 0; bottom: 0; height: 14vh; pointer-events: none; }
+.fondo svg { width: 100%; height: 100%; display: block; }
+#mar { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+
+/* Burbujas */
+.burbuja { position: absolute; bottom: -40px; left: var(--x); width: var(--t); height: var(--t); border-radius: 50%; border: 1.5px solid rgba(220, 245, 255, .55); background: radial-gradient(circle at 32% 28%, rgba(255, 255, 255, .55), rgba(255, 255, 255, .04) 55%); animation: subir var(--d) linear infinite; animation-delay: var(--r); will-change: transform; }
+@keyframes subir { to { transform: translate3d(var(--m), -112vh, 0); } }
+
+/* Animales */
+.ser { position: absolute; top: var(--y); left: 0; width: var(--w); animation: var(--ruta) var(--d) linear infinite; animation-delay: var(--r); will-change: transform; }
+.vaiven { animation: vaiven var(--v) ease-in-out infinite alternate; will-change: transform; }
+.vaiven svg { display: block; width: 100%; height: auto; overflow: visible; }
+.ser.der svg { transform: scaleX(-1); }
+@keyframes aIzq { from { transform: translate3d(108vw, 0, 0); } to { transform: translate3d(-24vw, 0, 0); } }
+@keyframes aDer { from { transform: translate3d(-24vw, 0, 0); } to { transform: translate3d(108vw, 0, 0); } }
+@keyframes aArriba { from { transform: translate3d(0, 110vh, 0); } to { transform: translate3d(0, -40vh, 0); } }
+@keyframes vaiven { from { transform: translateY(-16px) rotate(-3deg); } to { transform: translateY(16px) rotate(3deg); } }
+.cola { transform-box: fill-box; transform-origin: 0% 50%; animation: cola .42s ease-in-out infinite alternate; }
+@keyframes cola { from { transform: rotate(-16deg); } to { transform: rotate(16deg); } }
+.aleta { transform-box: fill-box; transform-origin: 50% 0; animation: aleta .9s ease-in-out infinite alternate; }
+@keyframes aleta { from { transform: rotate(-12deg); } to { transform: rotate(14deg); } }
+.ojos { transform-box: fill-box; transform-origin: 50% 50%; animation: parpadeo 5.2s ease-in-out infinite; animation-delay: var(--r); }
+@keyframes parpadeo { 0%, 94%, 100% { transform: scaleY(1); } 97% { transform: scaleY(.08); } }
+.tent { transform-box: fill-box; transform-origin: 50% 0; animation: tent 1.3s ease-in-out infinite alternate; }
+.tent:nth-child(even) { animation-delay: -.65s; }
+@keyframes tent { from { transform: rotate(-9deg) scaleY(1); } to { transform: rotate(9deg) scaleY(.92); } }
+.pulso { transform-box: fill-box; transform-origin: 50% 40%; animation: pulso 1.6s ease-in-out infinite alternate; }
+@keyframes pulso { from { transform: scale(1.06, .92); } to { transform: scale(.94, 1.06); } }
+.globo { transform-box: fill-box; transform-origin: 50% 50%; animation: globo 2.1s ease-in-out infinite alternate; }
+@keyframes globo { from { transform: scale(.94); } to { transform: scale(1.07); } }
+.pinza { transform-box: fill-box; transform-origin: 50% 100%; animation: pinza .8s ease-in-out infinite alternate; }
+@keyframes pinza { from { transform: rotate(-12deg); } to { transform: rotate(12deg); } }
+
+/* Centro */
+.centro { position: absolute; inset: 0; z-index: 5; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; pointer-events: none; }
+.tarjeta { pointer-events: auto; width: min(1120px, 88vw); padding: clamp(22px, 3.4vh, 38px) clamp(26px, 4vw, 56px) clamp(20px, 3vh, 32px); border-radius: 26px; border: 1px solid rgba(255, 255, 255, .24); background: rgba(4, 34, 62, .9); box-shadow: 0 22px 60px rgba(0, 15, 35, .42); }
+.marca { font-size: 13px; font-weight: 700; letter-spacing: .24em; color: #9fdcf5; }
+#titulo { margin-top: clamp(8px, 1.4vh, 14px); font-size: clamp(38px, min(6.6vw, 10vh), 100px); font-weight: 700; line-height: 1.04; letter-spacing: -.025em; color: #fff; overflow-wrap: anywhere; }
+#subtitulo { margin-top: clamp(6px, 1.2vh, 12px); font-size: clamp(20px, min(2.8vw, 4.2vh), 42px); font-weight: 600; line-height: 1.16; color: #ffd166; overflow-wrap: anywhere; }
+#subtitulo:empty { display: none; }
+.tiempo { margin-top: clamp(12px, 2.2vh, 24px); padding-top: clamp(10px, 2vh, 20px); border-top: 1px solid rgba(255, 255, 255, .2); display: flex; align-items: baseline; justify-content: center; gap: clamp(14px, 2vw, 28px); flex-wrap: wrap; }
+#reloj { font-size: clamp(36px, min(4.6vw, 7vh), 68px); font-weight: 700; line-height: 1.05; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+#fecha { font-size: clamp(18px, min(2.2vw, 3.2vh), 32px); font-weight: 600; color: #cfe8f6; }
+#fecha::first-letter { text-transform: uppercase; }
+#caja-encargado { margin-top: clamp(10px, 1.8vh, 18px); font-size: clamp(16px, min(1.8vw, 2.8vh), 26px); color: #b6d8ea; overflow-wrap: anywhere; }
+#caja-encargado[hidden] { display: none; }
+#encargado { font-weight: 700; color: #fff; }
+.estado { margin-top: clamp(8px, 1.4vh, 14px); font-size: 13.5px; color: #b6d8ea; }
+#abrir { margin-top: clamp(10px, 1.8vh, 18px); height: 42px; padding: 0 20px; display: inline-flex; align-items: center; gap: 8px; border: 1px solid rgba(255, 255, 255, .34); border-radius: 21px; background: rgba(255, 255, 255, .14); color: #fff; font: 600 14px "ORT Inter", Arial, sans-serif; cursor: pointer; }
+#abrir:hover { background: rgba(255, 255, 255, .24); }
+#abrir svg { width: 16px; height: 16px; }
+form { display: none; margin-top: 16px; }
+.abierto #abrir { display: none; }
+.abierto form { display: block; animation: entrar .18s ease-out; }
+@keyframes entrar { from { opacity: 0; transform: translateY(6px); } }
+.fila { display: flex; gap: 8px; width: min(480px, 100%); margin: 0 auto; }
+#pass { flex: 1; min-width: 0; height: 44px; padding: 0 16px; border: 1px solid rgba(255, 255, 255, .42); border-radius: 12px; outline: none; background: rgba(255, 255, 255, .95); color: #10263a; font: 400 15px "ORT Inter", Arial, sans-serif; user-select: text; }
+#pass:focus { border-color: #fff; box-shadow: 0 0 0 3px rgba(130, 215, 250, .55); }
+#ok { flex: none; height: 44px; padding: 0 18px; border: 0; border-radius: 12px; background: #3db2e8; color: #05243c; font: 700 14px "ORT Inter", Arial, sans-serif; cursor: pointer; }
+#ok:disabled { opacity: .65; cursor: progress; }
+#ayuda { margin-top: 8px; font-size: 12px; color: #b6d8ea; }
+#err { min-height: 18px; margin-top: 6px; font-size: 13px; font-weight: 600; color: #ffb4a6; }
+.mal { animation: sacudir .35s; }
+@keyframes sacudir { 25% { transform: translateX(-8px); } 50% { transform: translateX(8px); } 75% { transform: translateX(-5px); } }
+</style>
+</head>
+<body>
+<div class="rayos"></div>
+<div id="mar"></div>
+<div class="fondo"><svg viewBox="0 0 1200 120" preserveAspectRatio="none" aria-hidden="true"><path d="M0 62C160 22 300 92 470 62S790 18 960 58 1120 80 1200 52V120H0Z" fill="#02142a"/><path d="M0 88C200 62 340 110 560 88S930 66 1200 92V120H0Z" fill="#010e1f"/></svg></div>
+<div class="centro">
+  <div class="tarjeta" id="tarjeta">
+    <div class="marca">DRDT ENGINE</div>
+    <div id="titulo">Equipo bloqueado</div>
+    <div id="subtitulo"></div>
+    <div class="tiempo"><div id="reloj">--:--</div><div id="fecha"></div></div>
+    <div id="caja-encargado" hidden>Encargado: <span id="encargado"></span></div>
+    <div class="estado">Las pruebas siguen corriendo</div>
+    <button id="abrir" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>Desbloquear</button>
+    <form id="caja" autocomplete="off">
+      <div class="fila">
+        <input id="pass" type="password" placeholder="Contraseña" aria-label="Contraseña">
+        <button id="ok" type="submit">Entrar</button>
+      </div>
+      <div id="ayuda"></div>
+      <div id="err" role="alert"></div>
+    </form>
+  </div>
+</div>
+<script>
+const $ = (id) => document.getElementById(id);
+const LINEA = '#17213f';
+const ojos = (a, b, y, r) => `<g class="ojos">${[a, b].map((x) => `<circle cx="${x}" cy="${y}" r="${r}" fill="#fff" stroke="${LINEA}" stroke-width="2.4"/><circle cx="${x - r * .2}" cy="${y + r * .1}" r="${r * .56}" fill="${LINEA}"/><circle cx="${x - r * .42}" cy="${y - r * .16}" r="${r * .2}" fill="#fff"/>`).join('')}</g>`;
+const DIBUJO = {
+  // Pez de la unidad: cuerpo gordito, aleta larga arriba, ojos grandes y dos dientitos
+  pez: (c1, c2, f) => `<svg viewBox="0 0 130 86" aria-hidden="true">
+    <path class="cola" d="M101 47C108 35 122 34 128 44 123 57 108 60 101 50Z" fill="${f}" stroke="${LINEA}" stroke-width="2.6" stroke-linejoin="round"/>
+    <path d="M34 19C43 4 66 5 79 19 91 29 97 40 96 46 78 32 58 21 34 19Z" fill="${f}" stroke="${LINEA}" stroke-width="2.6" stroke-linejoin="round"/>
+    <path class="aleta" d="M42 66C50 72 62 74 70 68 62 80 48 79 42 66Z" fill="${f}" stroke="${LINEA}" stroke-width="2.4" stroke-linejoin="round"/>
+    <path d="M12 44C11 24 33 13 52 17 74 21 88 37 108 47 88 60 64 71 41 67 24 64 13 57 12 44Z" fill="${c1}" stroke="${LINEA}" stroke-width="2.8" stroke-linejoin="round"/>
+    <path d="M15 53C34 61 69 56 104 48 86 60 64 70 41 66 28 64 19 60 15 53Z" fill="${c2}"/>
+    <ellipse cx="58" cy="31" rx="5" ry="11" transform="rotate(-48 58 31)" fill="#fff" opacity=".82"/>
+    ${ojos(25, 44, 33, 9)}
+    <path d="M18 23Q24 18 30 22M39 22Q45 18 51 23" fill="none" stroke="${f}" stroke-width="3" stroke-linecap="round"/>
+    <path d="M19 49Q31 53 43 49" fill="none" stroke="${LINEA}" stroke-width="2.2" stroke-linecap="round"/>
+    <path d="M23 50L27 56 30 51ZM34 51L37 56 41 50Z" fill="#fff" stroke="${LINEA}" stroke-width="1.5" stroke-linejoin="round"/>
+    <path d="M68 49Q76 52 84 47" fill="none" stroke="${LINEA}" stroke-width="2" stroke-linecap="round"/>
+  </svg>`,
+  pulpo: (c1, c2, f) => `<svg viewBox="0 0 110 118" aria-hidden="true">
+    <g fill="none" stroke-linecap="round">
+    ${[[20, 'M26 62C14 74 10 92 18 106'], [34, 'M38 68C30 84 28 98 36 112'], [50, 'M50 70C47 86 47 100 52 114'], [62, 'M62 70C64 86 66 100 62 114'], [76, 'M74 68C82 84 84 98 76 112'], [88, 'M84 62C96 74 100 92 92 106']].map(([x, d], i) => `<g class="tent" style="animation-delay:${-i * .22}s"><path d="${d}" stroke="${LINEA}" stroke-width="12"/><path d="${d}" stroke="${i % 2 ? c1 : c2}" stroke-width="7.5"/></g>`).join('')}
+    </g>
+    <path d="M55 4C80 4 96 24 94 46 92 68 74 76 55 76 36 76 18 68 16 46 14 24 30 4 55 4Z" fill="${c1}" stroke="${LINEA}" stroke-width="2.8"/>
+    <path d="M19 56C30 70 80 70 91 56 87 70 72 76 55 76 38 76 23 70 19 56Z" fill="${c2}"/>
+    <ellipse cx="72" cy="20" rx="5" ry="10" transform="rotate(38 72 20)" fill="#fff" opacity=".78"/>
+    ${ojos(41, 67, 42, 10)}
+    <path d="M45 60Q55 66 65 60" fill="none" stroke="${LINEA}" stroke-width="2.3" stroke-linecap="round"/>
+    <path d="M49 62L52 67 55 63ZM57 63L60 67 62 62Z" fill="#fff" stroke="${LINEA}" stroke-width="1.3" stroke-linejoin="round"/>
+    <circle cx="30" cy="53" r="4" fill="${f}" opacity=".55"/><circle cx="80" cy="53" r="4" fill="${f}" opacity=".55"/>
+  </svg>`,
+  globo: (c1, c2, f) => `<svg viewBox="0 0 110 96" aria-hidden="true">
+    <path class="cola" d="M90 48C97 38 108 37 108 45 108 55 97 58 90 50Z" fill="${f}" stroke="${LINEA}" stroke-width="2.5" stroke-linejoin="round"/>
+    <g class="globo">
+      <path d="M49 2L54 13 44 13ZM18 11L28 20 20 25ZM80 10L78 24 70 19ZM4 42L16 39 16 49ZM94 40L92 50 84 47ZM18 80L24 69 32 77ZM81 80L70 76 77 69ZM49 94L44 84 55 84Z" fill="${f}" stroke="${LINEA}" stroke-width="2" stroke-linejoin="round"/>
+      <circle cx="49" cy="48" r="37" fill="${c1}" stroke="${LINEA}" stroke-width="2.8"/>
+      <path d="M15 60C26 80 72 80 83 60 80 76 66 85 49 85 32 85 18 76 15 60Z" fill="${c2}"/>
+      <ellipse cx="68" cy="29" rx="5" ry="10" transform="rotate(35 68 29)" fill="#fff" opacity=".78"/>
+    </g>
+    ${ojos(35, 57, 42, 10)}
+    <path d="M36 60Q46 67 56 60" fill="none" stroke="${LINEA}" stroke-width="2.3" stroke-linecap="round"/>
+    <path d="M40 62L43 68 46 63ZM50 63L53 68 55 61Z" fill="#fff" stroke="${LINEA}" stroke-width="1.4" stroke-linejoin="round"/>
+  </svg>`,
+  medusa: (c1, c2, f) => `<svg viewBox="0 0 100 128" aria-hidden="true">
+    <g fill="none" stroke-linecap="round">${['M24 58C16 78 30 88 22 112', 'M38 62C32 82 44 96 36 122', 'M52 62C58 84 46 98 54 124', 'M66 62C60 82 74 94 66 118', 'M78 58C86 76 72 88 80 108'].map((d, i) => `<g class="tent" style="animation-delay:${-i * .3}s"><path d="${d}" stroke="${LINEA}" stroke-width="7.5"/><path d="${d}" stroke="${f}" stroke-width="4"/></g>`).join('')}</g>
+    <g class="pulso">
+      <path d="M8 56C4 24 26 4 50 4S96 24 92 56C84 64 76 56 68 62 60 68 50 58 42 63 32 69 24 56 8 56Z" fill="${c1}" fill-opacity=".92" stroke="${LINEA}" stroke-width="2.8" stroke-linejoin="round"/>
+      <path d="M12 50C24 58 34 50 44 54 56 58 64 50 88 50 84 58 76 54 68 60 60 66 50 56 42 61 32 66 24 54 12 50Z" fill="${c2}" opacity=".75"/>
+      <ellipse cx="66" cy="20" rx="5" ry="9" transform="rotate(35 66 20)" fill="#fff" opacity=".78"/>
+    </g>
+    ${ojos(38, 62, 34, 8)}
+    <path d="M44 46Q50 50 56 46" fill="none" stroke="${LINEA}" stroke-width="2.2" stroke-linecap="round"/>
+  </svg>`,
+  cangrejo: (c1, c2, f) => `<svg viewBox="0 0 130 86" aria-hidden="true">
+    <g fill="none" stroke="${LINEA}" stroke-width="5" stroke-linecap="round"><path d="M34 58L14 70M36 66L20 80M96 58L116 70M94 66L110 80"/></g>
+    <g class="pinza"><path d="M24 40C14 30 6 28 6 16 6 8 14 4 22 6L18 16 28 10C36 16 34 30 34 44Z" fill="${c1}" stroke="${LINEA}" stroke-width="2.6" stroke-linejoin="round"/></g>
+    <g class="pinza" style="animation-delay:-.4s"><path d="M106 40C116 30 124 28 124 16 124 8 116 4 108 6L112 16 102 10C94 16 96 30 96 44Z" fill="${c1}" stroke="${LINEA}" stroke-width="2.6" stroke-linejoin="round"/></g>
+    <ellipse cx="65" cy="52" rx="39" ry="27" fill="${c1}" stroke="${LINEA}" stroke-width="2.8"/>
+    <path d="M29 58C42 74 88 74 101 58 96 72 82 79 65 79S34 72 29 58Z" fill="${c2}"/>
+    <path d="M50 30V20M80 30V20" stroke="${LINEA}" stroke-width="3"/>
+    ${ojos(50, 80, 18, 9)}
+    <path d="M55 56Q65 63 75 56" fill="none" stroke="${LINEA}" stroke-width="2.3" stroke-linecap="round"/>
+    <path d="M59 58L62 63 65 59ZM66 59L69 63 72 57Z" fill="#fff" stroke="${LINEA}" stroke-width="1.3" stroke-linejoin="round"/>
+    <circle cx="42" cy="50" r="4" fill="${f}" opacity=".6"/><circle cx="88" cy="50" r="4" fill="${f}" opacity=".6"/>
+  </svg>`
+};
+
+// 20 animales: [tipo, color, sombra, aletas, tamaño, alto %, duración s, ruta, desfase s]
+const AZUL = ['#3aa0dc', '#1f75c4', '#e8421f'], VERDE = ['#46c48f', '#1f9a68', '#ffb020'], NARANJA = ['#ff9f43', '#ee7c1c', '#2f72d4'];
+const MORADO = ['#a77bdf', '#7d52bd', '#ff5d8f'], ROSA = ['#ff86ae', '#ec5f8e', '#6b4bd1'], AMARILLO = ['#ffd34f', '#f2ab1d', '#e8421f'], TURQUESA = ['#3fcad2', '#159ca5', '#ff7a45'], ROJO = ['#f4624e', '#d33e2d', '#ffc83d'];
+const SERES = [
+  ['pez', AZUL, 170, 9, 34, 'aIzq', -3], ['pez', AZUL, 110, 26, 26, 'aDer', -11], ['pez', VERDE, 120, 16, 30, 'aDer', -22],
+  ['pez', NARANJA, 135, 72, 28, 'aIzq', -14], ['pez', MORADO, 105, 42, 24, 'aIzq', -19], ['pez', ROSA, 95, 61, 22, 'aDer', -7],
+  ['pez', AMARILLO, 115, 80, 31, 'aDer', -25], ['pez', TURQUESA, 100, 5, 27, 'aDer', -16],
+  ['pulpo', MORADO, 150, 48, 52, 'aDer', -30], ['pulpo', ROJO, 125, 13, 60, 'aIzq', -45], ['pulpo', VERDE, 105, 66, 46, 'aIzq', -9], ['pulpo', ROSA, 90, 30, 56, 'aDer', -38],
+  ['globo', AMARILLO, 115, 22, 44, 'aIzq', -28], ['globo', NARANJA, 90, 55, 38, 'aDer', -13], ['globo', TURQUESA, 80, 74, 50, 'aIzq', -36],
+  ['medusa', ROSA, 95, 0, 70, 'subeA', -21, 8], ['medusa', MORADO, 80, 0, 84, 'subeA', -52, 90], ['medusa', TURQUESA, 70, 0, 60, 'subeA', -5, 74],
+  ['cangrejo', ROJO, 115, 80, 42, 'aDer', -17], ['cangrejo', NARANJA, 95, 83, 54, 'aIzq', -40]
+];
+const mar = $('mar');
+for (const [tipo, c, tam, y, d, ruta, r, x] of SERES) {
+  const el = document.createElement('div');
+  el.className = 'ser' + (ruta === 'aDer' ? ' der' : '');
+  const sube = ruta === 'subeA';
+  el.style.cssText = `--w:${tam}px;--y:${sube ? '0' : y + '%'};--d:${d}s;--r:${r}s;--ruta:${sube ? 'aArriba' : ruta};--v:${(2 + (tam % 5) * .35).toFixed(2)}s;${sube ? `left:${x}%;` : ''}`;
+  el.innerHTML = `<div class="vaiven">${DIBUJO[tipo](c[0], c[1], c[2])}</div>`;
+  mar.appendChild(el);
+}
+for (let i = 0; i < 22; i++) {
+  const b = document.createElement('i');
+  b.className = 'burbuja';
+  const t = 6 + (i * 7) % 26;
+  b.style.cssText = `--x:${(i * 47) % 100}%;--t:${t}px;--d:${12 + (i * 5) % 16}s;--r:${-((i * 3.7) % 26)}s;--m:${(i % 2 ? 1 : -1) * (12 + i * 2)}px;`;
+  mar.appendChild(b);
+}
+
+function tic() {
+  const d = new Date();
+  $('reloj').textContent = d.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: false });
+  $('fecha').textContent = d.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' });
+}
+tic(); setInterval(tic, 1000);
+
+let ocultar;
+const tarjeta = $('tarjeta');
+function abrir() { tarjeta.classList.add('abierto'); $('err').textContent = ''; programar(); setTimeout(() => $('pass').focus(), 40); }
+function cerrar() { tarjeta.classList.remove('abierto'); $('pass').value = ''; $('err').textContent = ''; }
+function programar() { clearTimeout(ocultar); ocultar = setTimeout(cerrar, 45000); }
+$('abrir').onclick = abrir;
+$('pass').addEventListener('input', programar);
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') return cerrar();
+  if (!tarjeta.classList.contains('abierto') && e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) abrir();
+});
+document.addEventListener('contextmenu', (e) => e.preventDefault());
+document.addEventListener('dragstart', (e) => e.preventDefault());
+window.lock.info().then((i) => {
+  if (i && i.titulo) $('titulo').textContent = i.titulo;
+  $('subtitulo').textContent = (i && i.subtitulo) || '';
+  if (i && i.encargado) { $('encargado').textContent = i.encargado; $('caja-encargado').hidden = false; }
+  const c = (i && i.cuentas) || [];
+  $('ayuda').textContent = c.length ? 'Contraseña del usuario de la PC: ' + c[0] : 'Contraseña del usuario de la PC';
+}).catch(() => {});
+$('caja').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const p = $('pass').value;
+  if (!p) return $('pass').focus();
+  $('ok').disabled = true; $('ok').textContent = 'Revisando…'; $('err').textContent = '';
+  let r;
+  try { r = await window.lock.desbloquear(p); } catch (err) { r = { ok: false, error: 'No se pudo revisar la contraseña' }; }
+  $('ok').disabled = false; $('ok').textContent = 'Entrar';
+  if (r && r.ok) return;              // la ventana se cierra sola
+  $('pass').value = ''; $('pass').focus();
+  $('err').textContent = (r && r.error) || 'Contraseña incorrecta';
+  $('caja').classList.remove('mal'); void $('caja').offsetWidth; $('caja').classList.add('mal');
+  programar();
+});
+</script>
+</body>
+</html>

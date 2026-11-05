@@ -945,6 +945,14 @@ main { gap: 10px; padding: 14px 16px 0; }
 .slot-card.ficha-mal .slot-led { background: var(--error); }
 .slot-card.ficha-mal .slot-loop { color: var(--error); font-weight: 600; }
 
+/* Letreros de la pantalla de bloqueo */
+.modal-content.lk { width: 480px; padding: 24px; border-radius: 20px; background: var(--surface); gap: 10px; }
+.modal-content.lk h2 { font-size: 18px; font-weight: 600; letter-spacing: -.01em; }
+.modal-content.lk p { font-size: 12.5px; line-height: 1.45; color: var(--on-surface-variant); }
+.lk-rapidos { display: flex; flex-wrap: wrap; gap: 6px; }
+.lk-rapidos .chip { padding: 0 11px; }
+.modal-content.lk .campo input { height: 38px; font-size: 14px; }
+
 /* ===== Temas extra (usan la base oscura) ===== */
 :root[data-theme="dark"][data-tono="cafe"] {
   --primary: #d9a66c; --on-primary: #2a1a0c; --primary-container: #5a3d22; --on-primary-container: #f5dfc4;
@@ -1010,6 +1018,10 @@ main { gap: 10px; padding: 14px 16px 0; }
         <button class="btn btn-tonal ripple" onclick="openGlobalConfigModal()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>
           Loops
+        </button>
+        <button class="btn btn-tonal ripple" onclick="abrirLock()" title="Bloquear la pantalla">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+          Lock
         </button>
         <button class="btn btn-outlined peligro ripple" onclick="resetAllSlots()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>
@@ -1099,6 +1111,28 @@ main { gap: 10px; padding: 14px 16px 0; }
     </div>
   </div>
 
+  <!-- Letreros de la pantalla de bloqueo -->
+  <div class="modal-overlay" id="lockModal" onclick="if (event.target === this) cerrarLock()">
+    <div class="modal-content lk" role="dialog" aria-modal="true" aria-labelledby="lk-title">
+      <h2 id="lk-title">Bloquear la pantalla</h2>
+      <p>Para quitar el bloqueo se pide la contraseña del usuario de esta PC.</p>
+      <div class="lk-rapidos" aria-label="Letreros rápidos">
+        <button type="button" class="chip" data-t="Pruebas en proceso" data-s="No tocar ni retirar unidades">Pruebas</button>
+        <button type="button" class="chip" data-t="Equipo en mantenimiento" data-s="No ingresar unidades">Mantenimiento</button>
+        <button type="button" class="chip" data-t="No tocar" data-s="Equipo en uso">No tocar</button>
+        <button type="button" class="chip" data-t="Equipo fuera de servicio" data-s="Avisar al encargado">Fuera de servicio</button>
+      </div>
+      <label class="campo"><span>Letrero grande</span><input id="lk-titulo" type="text" maxlength="60" placeholder="Pruebas en proceso"></label>
+      <label class="campo"><span>Segundo letrero <em>(opcional)</em></span><input id="lk-subtitulo" type="text" maxlength="90" placeholder="No tocar ni retirar unidades"></label>
+      <label class="campo"><span>Nombre del encargado</span><input id="lk-encargado" type="text" maxlength="50" placeholder="Nombre y apellido"></label>
+      <div class="pin-error" id="lk-error" role="alert"></div>
+      <div class="pin-acciones">
+        <button class="btn btn-text ripple" type="button" onclick="cerrarLock()">Cancelar</button>
+        <button class="btn btn-filled ripple" type="button" id="lk-ok" onclick="activarLock()">Bloquear</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Contraseña para reiniciar -->
   <div class="modal-overlay" id="pinModal" onclick="if (event.target === this) cerrarPin()">
     <div class="modal-content pin" role="dialog" aria-modal="true" aria-labelledby="pin-title">
@@ -1123,7 +1157,7 @@ main { gap: 10px; padding: 14px 16px 0; }
       <p id="pin-msg"></p>
       <label class="rs-cerrar" id="rs-cerrar-wrap"><input type="checkbox" id="rs-cerrar"> <span>Cerrar también sus terminales <em id="rs-cerrar-n"></em></span></label>
       <label class="campo">
-        <span>Contraseña</span>
+        <span>Contraseña de tu usuario de Linux</span>
         <input id="pin-input" type="password" autocomplete="off" placeholder="••••••••">
       </label>
       <div class="pin-error" id="pin-error" role="alert"></div>
@@ -1905,12 +1939,6 @@ main { gap: 10px; padding: 14px 16px 0; }
     }
 
     /* ---------- Contraseña para reiniciar ---------- */
-    // Se guarda solo la huella (SHA-256) de la contraseña, no el texto
-    const HUELLA_REINICIO = '897beebc7584bf632c25e81634cd70554e5a9164a56af6e6efe19046869d8355';
-    async function huella(txt) {
-      const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(txt));
-      return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('');
-    }
     // Reiniciar: todos, uno solo o los que marques
     let rsModo = 'todos';
     const rsSel = new Set();
@@ -1981,11 +2009,22 @@ main { gap: 10px; padding: 14px 16px 0; }
       const inp = document.getElementById('pin-input');
       const lista = rsLista();
       if (!lista.length) return;
-      if (await huella(inp.value) === HUELLA_REINICIO) {
+      const boton = document.getElementById('rs-ok');
+      if (boton.dataset.revisando) return;
+      boton.dataset.revisando = '1';
+      const textoBoton = boton.textContent;
+      boton.disabled = true; boton.textContent = 'Revisando…';
+      document.getElementById('pin-error').textContent = '';
+      let r = null;
+      try { r = await ipcRenderer.invoke('auth:verificar', inp.value); } catch (e) {}
+      delete boton.dataset.revisando;
+      boton.disabled = false; boton.textContent = textoBoton;
+      rsPintar();
+      if (r && r.ok) {
         cerrarPin();
         ejecutarReinicio(lista, document.getElementById('rs-cerrar').checked);
       } else {
-        document.getElementById('pin-error').textContent = 'Contraseña incorrecta';
+        document.getElementById('pin-error').textContent = (r && r.error) || 'No se pudo revisar la contraseña';
         const caja = document.querySelector('.modal-content.pin');
         caja.classList.remove('sacudir'); void caja.offsetWidth; caja.classList.add('sacudir');
         inp.select();
@@ -3127,6 +3166,45 @@ main { gap: 10px; padding: 14px 16px 0; }
     document.querySelector('.brand-logo').title = 'Ver la bienvenida y revisar el sistema';
     document.querySelector('.brand-logo').addEventListener('click', iniciarBienvenida);
     ipcRenderer.invoke('config:leer').then((c) => { if (!c || !c.bienvenida) iniciarBienvenida(); }).catch(() => {});
+
+    /* ---------- Lock: bloquear la pantalla con peces ---------- */
+    const LK_CAMPOS = ['titulo', 'subtitulo', 'encargado'];
+    function abrirLock() {
+      let g = {};
+      try { g = JSON.parse(localStorage.getItem('ort_lock') || '{}') || {}; } catch (e) {}
+      if (!g.titulo && !g.subtitulo) { g.titulo = 'Pruebas en proceso'; g.subtitulo = 'No tocar ni retirar unidades'; }
+      for (const k of LK_CAMPOS) document.getElementById('lk-' + k).value = g[k] || '';
+      document.getElementById('lk-error').textContent = '';
+      document.getElementById('lockModal').style.display = 'flex';
+      setTimeout(() => { const e = document.getElementById('lk-encargado'); (e.value ? document.getElementById('lk-titulo') : e).focus(); }, 50);
+    }
+    function cerrarLock() { document.getElementById('lockModal').style.display = 'none'; }
+    async function activarLock() {
+      const datos = {};
+      for (const k of LK_CAMPOS) datos[k] = document.getElementById('lk-' + k).value.trim();
+      if (!datos.titulo) { document.getElementById('lk-error').textContent = 'Escribe el letrero grande'; return document.getElementById('lk-titulo').focus(); }
+      try { localStorage.setItem('ort_lock', JSON.stringify(datos)); } catch (e) {}
+      const b = document.getElementById('lk-ok');
+      b.disabled = true;
+      let r = null;
+      try { r = await ipcRenderer.invoke('lock:activar', datos); } catch (e) {}
+      b.disabled = false;
+      if (r && r.ok) cerrarLock();
+      else document.getElementById('lk-error').textContent = (r && r.error) || 'No se pudo bloquear. Intenta de nuevo.';
+    }
+    document.querySelectorAll('.lk-rapidos .chip').forEach((c) => c.addEventListener('click', () => {
+      document.getElementById('lk-titulo').value = c.dataset.t;
+      document.getElementById('lk-subtitulo').value = c.dataset.s;
+    }));
+    document.getElementById('lockModal').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && e.target.tagName === 'INPUT') activarLock();
+      if (e.key === 'Escape') cerrarLock();
+    });
+    ipcRenderer.on('lock:cambio', (_e, d) => {
+      if (!d) return;
+      if (d.fallo) tele('Intento de desbloqueo con contraseña incorrecta.', 'warn');
+      else tele(d.activo ? 'Pantalla bloqueada.' : 'Pantalla desbloqueada.', 'info');
+    });
 
     /* ---------- Efecto de onda al hacer clic (estilo Material) ---------- */
     document.addEventListener('pointerdown', (e) => {
