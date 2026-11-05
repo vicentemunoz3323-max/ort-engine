@@ -58,7 +58,7 @@ app.whenReady().then(() => {
   createWindow();
   // Lock: pantalla bloqueada con peces y revisión de la contraseña del usuario
   require('./lock_main.js').iniciar({
-    avisar: (activo, fallo) => { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('lock:cambio', { activo, fallo: !!fallo }); }
+    avisar: (activo, fallo, motivo) => { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('lock:cambio', { activo, fallo: !!fallo, motivo: motivo || '' }); }
   });
   // y otra revisión cada hora
   setInterval(() => { if (app.isPackaged) buscarActualizaciones(); }, 60 * 60 * 1000);

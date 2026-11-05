@@ -216,7 +216,8 @@ document.addEventListener('keydown', (e) => {
 });
 document.addEventListener('contextmenu', (e) => e.preventDefault());
 document.addEventListener('dragstart', (e) => e.preventDefault());
-window.lock.info().then((i) => {
+// Primero el formulario, para que funcione aunque falle lo demás
+const pedirInfo = () => window.lock.info().then((i) => {
   if (i && i.titulo) $('titulo').textContent = i.titulo;
   $('subtitulo').textContent = (i && i.subtitulo) || '';
   if (i && i.encargado) { $('encargado').textContent = i.encargado; $('caja-encargado').hidden = false; }
@@ -237,6 +238,8 @@ $('caja').addEventListener('submit', async (e) => {
   $('caja').classList.remove('mal'); void $('caja').offsetWidth; $('caja').classList.add('mal');
   programar();
 });
+pedirInfo();
+window.lock.listo();      // avisa que ya cargó: si no llega, la app quita el bloqueo sola
 </script>
 </body>
 </html>

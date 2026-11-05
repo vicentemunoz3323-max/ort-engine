@@ -5,6 +5,11 @@
    - Se quita con la contraseña del usuario de la PC (la misma de Linux).
    - Las contraseñas se revisan con "su" dentro de una pty de Python. No se guardan en ningún lado
      y nunca van en los argumentos de un comando (se pasan por stdin).
+   - Para que nadie se quede encerrado:
+     · antes de bloquear se pide y se revisa la contraseña; si no se puede revisar, no se bloquea
+     · si la pantalla no carga en 10 s, se traba o se cae, el bloqueo se quita solo
+     · si al desbloquear "su" no funciona, el bloqueo se quita y se avisa
+   - Lo que pasa queda en <carpeta temporal>/ort-engine-<uid>/lock.log (nunca la contraseña).
    ============================================================ */
 const { ipcMain, BrowserWindow, screen, app } = require('electron');
 const fs = require('fs');
@@ -42,6 +47,14 @@ code = os.WEXITSTATUS(st) if os.WIFEXITED(st) else 1
 sys.exit(code if enviada else 3)
 `;
 
+const archivoLog = () => path.join(os.tmpdir(), `ort-engine-${process.getuid ? process.getuid() : 'u'}`, 'lock.log');
+function registrar(msg) {
+  try {
+    fs.mkdirSync(path.dirname(archivoLog()), { recursive: true });
+    fs.appendFileSync(archivoLog(), `${new Date().toISOString()} ${msg}\n`);
+  } catch (e) {}
+}
+
 // "su" no funciona si la app se abrió con "no new privileges" (por ejemplo desde VS Code)
 function noNewPrivs() {
   try { return /NoNewPrivs:\s*1/.test(fs.readFileSync('/proc/self/status', 'utf8')); } catch (e) { return false; }
@@ -76,8 +89,10 @@ async function verificar(pass) {
   const lista = cuentas();
   if (!lista.length) return { ok: false, error: 'No se pudo revisar la contraseña: no hay un usuario válido.' };
   const r = await probarUsuario(lista[0], pass);
+  registrar(`revisión de contraseña de ${lista[0]}: código ${r}`);
   if (r === 0) return { ok: true, usuario: lista[0] };
-  return { ok: false, error: r === 3 ? 'No se pudo revisar la contraseña (su no la pidió).' : 'Contraseña incorrecta' };
+  if (r === 3) return { ok: false, sinRevisar: true, error: 'No se pudo revisar la contraseña (su no la pidió).' };
+  return { ok: false, error: 'Contraseña incorrecta' };
 }
 
 let ventanas = [];
@@ -86,6 +101,15 @@ let letrero = { titulo: '', subtitulo: '', encargado: '' };
 const texto = (v, max) => (typeof v === 'string' ? v.replace(/\s+/g, ' ').trim().slice(0, max) : '');
 let permitirCierre = false;
 let avisar = () => {};
+
+// Quita el bloqueo sin contraseña porque algo falló: mejor libre que con la PC trabada
+function quitarPorFalla(motivo) {
+  if (!activo) return;
+  registrar('bloqueo quitado por falla: ' + motivo);
+  activo = false;
+  cerrarVentanas();
+  avisar(false, false, motivo);
+}
 
 function crearVentanas() {
   cerrarVentanas();
@@ -101,6 +125,13 @@ function crearVentanas() {
     w.setAlwaysOnTop(true, 'screen-saver');
     w.setVisibleOnAllWorkspaces(true);
     w.on('close', (e) => { if (!permitirCierre) e.preventDefault(); });
+    // Si la pantalla no termina de cargar a tiempo, no se deja la PC trabada
+    w.__guardia = setTimeout(() => quitarPorFalla('la pantalla de bloqueo no cargó en 10 s'), 10000);
+    w.on('unresponsive', () => quitarPorFalla('la pantalla de bloqueo dejó de responder'));
+    w.webContents.on('render-process-gone', (_e, det) => quitarPorFalla('la pantalla de bloqueo se cerró: ' + (det && det.reason)));
+    w.webContents.on('did-fail-load', (_e, cod, desc) => quitarPorFalla(`no cargó lock.html: ${cod} ${desc}`));
+    w.webContents.on('preload-error', (_e, _p, err) => quitarPorFalla('falló lock_preload.js: ' + (err && err.message)));
+    w.webContents.on('console-message', (_e, nivel, msg, linea) => { if (nivel >= 2) registrar(`lock.html:${linea} ${msg}`); });
     w.webContents.on('will-navigate', (e) => e.preventDefault());
     w.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
     w.webContents.on('before-input-event', (e, inp) => {
@@ -108,7 +139,7 @@ function crearVentanas() {
       if ((inp.control || inp.meta) && ['r', 'w', 'q', 'i', '+', '-', '=', '0'].includes(k)) e.preventDefault();
       if (['f5', 'f11', 'f12'].includes(k)) e.preventDefault();
     });
-    w.once('ready-to-show', () => { w.show(); w.setKiosk(true); if (n === 0) w.focus(); });
+    w.once('ready-to-show', () => { w.show(); w.setKiosk(true); if (n === 0) { w.focus(); w.webContents.focus(); } });
     w.on('blur', () => setTimeout(() => {
       if (activo && !w.isDestroyed() && !BrowserWindow.getFocusedWindow()) { w.show(); w.focus(); }
     }, 300));
@@ -118,7 +149,7 @@ function crearVentanas() {
 }
 function cerrarVentanas() {
   permitirCierre = true;
-  for (const w of ventanas) { try { if (!w.isDestroyed()) { w.setClosable(true); w.setKiosk(false); w.destroy(); } } catch (e) {} }
+  for (const w of ventanas) { clearTimeout(w.__guardia); try { if (!w.isDestroyed()) { w.setClosable(true); w.setKiosk(false); w.destroy(); } } catch (e) {} }
   ventanas = [];
 }
 
@@ -129,24 +160,36 @@ function revisarHerramientas() {
 function iniciar(opc = {}) {
   if (opc.avisar) avisar = opc.avisar;
   ipcMain.handle('auth:verificar', (_e, pass) => verificar(pass));
-  ipcMain.handle('lock:activar', async (_e, datos) => {
+  ipcMain.handle('lock:activar', async (_e, datos, pass) => {
     if (activo) return { ok: true };
     const d = datos || {};
     letrero = { titulo: texto(d.titulo, 60), subtitulo: texto(d.subtitulo, 90), encargado: texto(d.encargado, 50) };
     if (process.getuid && process.getuid() === 0) return { ok: false, error: 'La app corre como root: no se podría revisar la contraseña para quitar el bloqueo.' };
     // Sin estas herramientas no se podría desbloquear: mejor no bloquear
     if (!(await revisarHerramientas())) return { ok: false, error: 'Faltan "su" o "python3": no se podría quitar el bloqueo.' };
+    // La misma revisión que se usará para desbloquear: si no funciona aquí, no se bloquea
+    const previa = await verificar(pass);
+    if (!previa.ok) return { ok: false, error: previa.error };
     activo = true;
+    registrar('pantalla bloqueada');
     crearVentanas();
     avisar(true);
     return { ok: true };
   });
   ipcMain.handle('lock:info', () => ({ equipo: os.hostname(), cuentas: cuentas(), ...letrero }));
+  ipcMain.handle('lock:listo', (e) => {
+    const w = BrowserWindow.fromWebContents(e.sender);
+    if (w) clearTimeout(w.__guardia);
+    registrar('pantalla de bloqueo lista');
+    return true;
+  });
   ipcMain.handle('lock:desbloquear', async (_e, pass) => {
     if (!activo) return { ok: true };
     const r = await verificar(pass);
+    if (r.sinRevisar) { quitarPorFalla(r.error); return { ok: true }; }
     if (!r.ok) { avisar(true, true); return r; }
     activo = false;
+    registrar('pantalla desbloqueada');
     cerrarVentanas();
     avisar(false);
     return { ok: true };
