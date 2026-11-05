@@ -7,7 +7,8 @@
      y nunca van en los argumentos de un comando (se pasan por stdin).
    - Para que nadie se quede encerrado:
      · antes de bloquear se revisa que "su" pida contraseña; si no, no se bloquea
-     · si la pantalla no carga en 10 s, se traba o se cae, el bloqueo se quita solo
+     · si la pantalla se cae, se vuelve a abrir en modo simple (sin animaciones)
+     · si no carga en 10 s, se traba o el modo simple también se cae, el bloqueo se quita solo
      · si al desbloquear "su" no funciona, el bloqueo se quita y se avisa
    - Lo que pasa queda en <carpeta temporal>/ort-engine-<uid>/lock.log (nunca la contraseña).
    ============================================================ */
@@ -139,7 +140,8 @@ function crearVentanas() {
       frame: false, kiosk: true, fullscreen: true, alwaysOnTop: true, skipTaskbar: true,
       movable: false, resizable: false, minimizable: false, maximizable: false, closable: false,
       backgroundColor: '#06283f', show: false,
-      webPreferences: { contextIsolation: true, nodeIntegration: false, preload: path.join(__dirname, 'lock_preload.js') }
+      // sandbox: false porque main.js abre la app con --no-sandbox (la ventana principal ya trabaja así)
+      webPreferences: { contextIsolation: true, nodeIntegration: false, sandbox: false, preload: path.join(__dirname, 'lock_preload.js') }
     });
     w.setAlwaysOnTop(true, 'screen-saver');
     w.setVisibleOnAllWorkspaces(true);
@@ -147,7 +149,16 @@ function crearVentanas() {
     // Si la pantalla no termina de cargar a tiempo, no se deja la PC trabada
     w.__guardia = setTimeout(() => quitarPorFalla('la pantalla de bloqueo no cargó en 10 s'), 10000);
     w.on('unresponsive', () => quitarPorFalla('la pantalla de bloqueo dejó de responder'));
-    w.webContents.on('render-process-gone', (_e, det) => quitarPorFalla('la pantalla de bloqueo se cerró: ' + (det && det.reason)));
+    w.webContents.on('render-process-gone', (_e, det) => {
+      const motivo = `${det && det.reason} (código ${det && det.exitCode})`;
+      if (w.__simple) return quitarPorFalla('la pantalla de bloqueo se cerró: ' + motivo);
+      // Primera caída: se vuelve a abrir sin animaciones para que siga bloqueada y se pueda usar
+      registrar(`pantalla con animaciones cerrada: ${motivo}; se abre en modo simple`);
+      w.__simple = true;
+      clearTimeout(w.__guardia);
+      w.__guardia = setTimeout(() => quitarPorFalla('la pantalla de bloqueo no cargó en 10 s'), 10000);
+      w.loadFile(path.join(__dirname, 'lock.html'), { query: { simple: '1' } });
+    });
     w.webContents.on('did-fail-load', (_e, cod, desc) => quitarPorFalla(`no cargó lock.html: ${cod} ${desc}`));
     w.webContents.on('preload-error', (_e, _p, err) => quitarPorFalla('falló lock_preload.js: ' + (err && err.message)));
     w.webContents.on('console-message', (_e, nivel, msg, linea) => { if (nivel >= 2) registrar(`lock.html:${linea} ${msg}`); });
