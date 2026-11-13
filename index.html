@@ -2712,9 +2712,21 @@ main { gap: 10px; padding: 14px 16px 0; }
       if (!c || !monitorDeCorrida(i)) return;
       const total = totalLoops(c.loops);
       // Loop con muy pocos sleeps: el proceso principal ya está cerrando la consola
+      // Falla 1: se avisa una sola vez y la prueba sigue
+      const nFallas = Array.isArray(m.fallas) ? m.fallas.length : 0;
+      if (nFallas >= 1 && !m.prematura && !c.avisoFalla1) {
+        const f1 = m.fallas[0];
+        c.avisoFalla1 = true;
+        guardarCorridas();
+        guardarRegistro({ id: c.hid, falla1: { linea: f1.linea, ts: f1.ts, loop: f1.loop } });
+        tele(`Slot ${pad(i)}: <b>falla 1</b> en el loop ${f1.loop ?? 0}: ${escapar(f1.linea.slice(0, 140))}. Si vuelve a fallar se cierra la terminal.`, 'warn');
+        if (!inicial) mostrarToast({ titulo: `Slot ${pad(i)}: falla 1`, msg: `${c.serial}: ${f1.linea.slice(0, 140)}. Si vuelve a fallar se cierra la terminal.`, tipo: 'err', autoOcultar: 15000 });
+        notificar('fallo', { title: `Slot ${pad(i)} · Falla 1`, message: `${c.serial} · P/N ${c.pn}\nLoop ${f1.loop ?? 0} de ${c.loops}\n${f1.linea.slice(0, 300)}\nSi vuelve a fallar se cierra la terminal.`, tags: ['warning'], priority: 4 });
+      }
+      // Falla 2: el proceso principal ya está cerrando la consola; se avisa una sola vez
       if (m.prematura && !c.avisoPrematura) {
         const f = m.prematura;
-        const motivo = `La ejecución ${f.ejecucion} terminó antes de tiempo: solo ${f.sleeps} sleeps. Se cerró la consola.`;
+        const motivo = (f.motivo || `La ejecución ${f.ejecucion} terminó antes de tiempo: solo ${f.sleeps} sleeps`) + '. Se cerró la consola.';
         const extra = f.siguiente ? ` Alcanzó a arrancar la ejecución ${f.siguiente}.` : '';
         c.avisoPrematura = true;
         c.cerradoHist = true;      // ya queda registrada aquí como falla, no como "detenida"
@@ -2724,7 +2736,7 @@ main { gap: 10px; padding: 14px 16px 0; }
         tele(`Slot ${pad(i)}: <b>falló</b>. ${escapar(motivo + extra)}`, 'err');
         mostrarToast({ titulo: `Slot ${pad(i)} falló`, msg: `${c.serial}: ${motivo}${extra}`, tipo: 'err', autoOcultar: 20000 });
         try { new Notification(`ORT Engine · Slot ${pad(i)} falló`, { body: `${c.serial}: ${motivo}${extra}` }); } catch (e) {}
-        notificar('fallo', { title: `Slot ${pad(i)} · FALLÓ`, message: `${c.serial} · P/N ${c.pn}\n${motivo}${extra}`, tags: ['rotating_light'], priority: 5 });
+        notificar('fallo', { title: `Slot ${pad(i)} · FALLÓ ${f.fallas || 2} veces · terminal cerrada`, message: `${c.serial} · P/N ${c.pn}\nLoop ${f.loop ?? 0} de ${c.loops}\n${motivo}${extra}`, tags: ['rotating_light'], priority: 5 });
       }
       const nuevoError = !m.prematura && (m.estado === 'slot' || m.estado === 'sistema') && m.error &&
         !(antes && antes.estado === m.estado && antes.error && antes.error.ts === m.error.ts && antes.error.linea === m.error.linea);
@@ -2742,10 +2754,17 @@ main { gap: 10px; padding: 14px 16px 0; }
           ...(m.exit !== null && m.exit !== 0 ? { salida: m.exitTs, motivo: (sis ? 'Sistema caído: ' : 'Slot caído: ') + m.error.linea, loopAlcanzado: m.loop ?? 0, horasCorridas: +(((m.exitTs || Date.now()) - c.inicio) / 3600000).toFixed(2) } : {}) });
         if (!inicial) {
           tele(`Slot ${pad(i)}: <b>${sis ? 'SISTEMA CAÍDO' : 'SLOT CAÍDO'}</b> · <code>${escapar(m.error.linea.slice(0, 140))}</code>`, 'err');
-          if (!sis) {
-            mostrarToast({ titulo: `Slot ${pad(i)} caído`, msg: m.error.linea.slice(0, 160), tipo: 'err', autoOcultar: 20000 });
-            try { new Notification('ORT Engine · Slot ' + pad(i) + ' caído', { body: m.error.linea.slice(0, 180) }); } catch (e) {}
-            notificar('detenido', { title: `Slot ${pad(i)} · CAÍDO`, message: `${c.serial} · P/N ${c.pn}\nLoop ${m.loop ?? 0} de ${c.loops}\n${m.error.linea.slice(0, 300)}`, tags: ['rotating_light'], priority: 5 });
+          // SLOT CAÍDO por texto: un solo aviso por unidad y NO se cierra la terminal
+          // (lo único que cierra es la falla 2: dos loops con pocos sleeps)
+          if (!sis && !c.avisoCaido) {
+            c.avisoCaido = true; guardarCorridas();
+            const hid = c.hid;
+            setTimeout(() => {      // 3 s: si fue un Traceback, ya se tiene la línea del error real
+              const cc = corridas[i], mm = monitor[i];
+              if (!cc || cc.hid !== hid) return;
+              const linea = mm && mm.error ? mm.error.linea : '';
+              notificar('detenido', { title: `Slot ${pad(i)} · Error en la consola`, message: `${cc.serial} · P/N ${cc.pn}\nLoop ${mm && mm.loop != null ? mm.loop : 0} de ${cc.loops}\n${linea.slice(0, 300)}\nLa terminal NO se cierra por esto. Solo se avisa una vez.`, tags: ['warning'], priority: 4 });
+            }, 3000);
           }
         }
       }
@@ -2774,7 +2793,8 @@ main { gap: 10px; padding: 14px 16px 0; }
         if (!inicial) {
           tele(`<b>SISTEMA CAÍDO</b>: ${escapar(prim ? prim.linea.slice(0, 140) : '')}`, 'err');
           try { new Notification('ORT Engine · SISTEMA CAÍDO', { body: (prim ? prim.linea : '').slice(0, 180) }); } catch (e) {}
-          notificar('detenido', { title: 'SISTEMA CAÍDO', message: `${lista.length === 1 ? 'Slot ' + pad(lista[0]) : 'Slots ' + lista.map(pad).join(', ')}\n${prim ? prim.linea.slice(0, 300) : ''}`, tags: ['sos'], priority: 5 });
+          // si el sistema va y viene, el aviso al celular sale una vez cada 30 min como máximo
+          if (Date.now() - (window.__sistemaNtfyTs || 0) > 30 * 60 * 1000) { window.__sistemaNtfyTs = Date.now(); notificar('detenido', { title: 'SISTEMA CAÍDO', message: `${lista.length === 1 ? 'Slot ' + pad(lista[0]) : 'Slots ' + lista.map(pad).join(', ')}\n${prim ? prim.linea.slice(0, 300) : ''}`, tags: ['sos'], priority: 5 }); }
           mostrarToast({ titulo: 'Sistema caído', msg: `${lista.length === 1 ? 'Una unidad se quedó' : lista.length + ' unidades se quedaron'} a medias. Cuando el sistema regrese puedes retomarlas con los loops que les faltan.`, tipo: 'err', ok: 'Retomar…', accion: () => { ocultarToast(); abrirRetomar(); } });
         }
       }
@@ -2790,7 +2810,7 @@ main { gap: 10px; padding: 14px 16px 0; }
         const total = totalLoops(c.loops), t = Date.now() - c.inicio;
         const m = monitorDeCorrida(i) ? monitor[i] : null;
         const f = m ? finDeCorrida(c, m) : null;
-        if (m && m.prematura) { status = 'Falló'; detalle = `⚠ Loop ${m.prematura.loop}/${c.loops}: ${m.prematura.sleeps} sleeps`; }
+        if (m && m.prematura) { status = 'Falló'; detalle = `⚠ Falló ${m.prematura.fallas || 2} veces · loop ${m.prematura.loop ?? 0}/${c.loops}`; }
         else if (f && f.terminado) { status = 'Completado'; detalle = `✓ Completó ${total} ${total === 1 ? 'loop' : 'loops'}`; }
         else if (f && f.anticipada) { status = 'Falló'; detalle = `⚠ Terminó antes de tiempo en loop ${f.actual}/${c.loops}`; }
         else if (m && (m.estado === 'slot' || m.estado === 'sistema')) { status = 'Caído'; detalle = `⚠ ${m.estado === 'sistema' ? 'Sistema caído' : 'Slot caído'} en loop ${m.loop ?? 0}/${c.loops}`; }

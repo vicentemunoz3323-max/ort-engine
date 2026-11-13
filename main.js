@@ -759,9 +759,16 @@ setInterval(async () => {
 }, 60 * 1000);
 
 // Evento de la app: 'entrada' | 'fin' | 'detenido'
+// Candado contra avisos repetidos: el mismo aviso (título + mensaje) no se vuelve a mandar en 15 min
+const enviadosNtfy = new Map();
 ipcMain.handle('ntfy:evento', async (_e, tipo, aviso) => {
   const n = leerConfig().ntfy;
   if (!n.activo || !n[tipo]) return { ok: false, omitido: true };
+  const clave = String(aviso && aviso.title) + '|' + String(aviso && aviso.message);
+  const ahora = Date.now();
+  for (const [k, t] of enviadosNtfy) if (ahora - t > 15 * 60 * 1000) enviadosNtfy.delete(k);
+  if (enviadosNtfy.has(clave)) return { ok: true, repetido: true };
+  enviadosNtfy.set(clave, ahora);
   aviso = { ...aviso, message: `${aviso.message}\nEstación: ${os.hostname()}` };
   const r = await publicarNtfy(n, aviso);
   if (!r.ok && pendientesNtfy.length < 100) pendientesNtfy.push({ aviso, creado: Date.now() });

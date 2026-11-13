@@ -7,7 +7,15 @@
    - "Execution N started successfully"  → empieza una ejecución. El script cuenta desde 1 y la app
      desde 0: "Execution 1" es el loop 0, "Execution 8" es el loop 7
    - "Station is active. Sleeping…"       → se cuenta; un loop bueno tiene más de 20 (uno cada 20 min)
-   - "Station is idle" con pocos sleeps   → el loop acabó antes de tiempo: se cierra la consola
+   - "Station is idle" con pocos sleeps   → el loop acabó antes de tiempo (FALLA de la unidad)
+   - FALLAS (lo único que puede cerrar una consola): un loop que terminó con pocos sleeps.
+       Falla 1 → se avisa (una sola notificación) y la prueba sigue.
+       Falla 2 → se cierra la consola (y se avisa una sola vez).
+       Candados para no cerrar una unidad buena:
+         · solo cuenta una falla por ejecución (si "Station is idle" sale dos veces en el mismo loop, es una)
+         · no cuenta si no se vieron sus sleeps (corrida de una versión anterior)
+         · las dos fallas tienen que ser de ejecuciones distintas
+         · un SLOT CAÍDO por texto (refused, ERROR, Traceback…) NUNCA cierra la consola: solo se avisa
    - un error con 8090 / localhost        → SISTEMA CAÍDO (el servicio de la PC)
    - "refused", Traceback, ERROR, FAIL…   → SLOT CAÍDO
    - el script terminó (slot-01.exit)     → código 0 = terminó bien, otro = caído
@@ -38,6 +46,8 @@ const RX_SLEEP = /station is active\b.*\bsleeping\b/i;
 const RX_IDLE = /station is idle\b/i;
 // Menos de estos sleeps en una ejecución = la unidad falló. Un loop bueno trae más de 20 y uno fallido 3 o 4.
 const MIN_SLEEPS = 15;
+// A la segunda falla se cierra la consola (la primera solo se avisa)
+const MAX_FALLAS = 2;
 
 const MAX_LINEAS = 40;
 let DIR = null;
@@ -89,7 +99,7 @@ const VERSION_ESTADO = 2;
 const aLoop = (n) => Math.max(0, n - 1);    // "Execution 1" del script = loop 0 de la app
 
 function nuevo(s) {
-  return { v: VERSION_ESTADO, slot: s, offset: 0, resto: '', loop: null, loopTs: null, ejecuciones: [], sleeps: 0, prematura: null, estado: 'esperando',
+  return { v: VERSION_ESTADO, slot: s, offset: 0, resto: '', loop: null, loopTs: null, ejecuciones: [], sleeps: 0, prematura: null, fallas: [], estado: 'esperando',
     error: null, incidentes: [], exit: null, exitTs: null, lineas: [], cambio: Date.now() };
 }
 
@@ -125,6 +135,22 @@ function clasificar(linea) {
   return null;
 }
 
+// Anota una falla de la unidad (solo loops con pocos sleeps). A la segunda, de otra ejecución,
+// se marca "prematura" y main.js cierra la consola.
+function registrarFalla(e, f) {
+  if (!Array.isArray(e.fallas)) e.fallas = [];
+  if (f.ejecucion != null && e.fallas.some((x) => x.ejecucion === f.ejecucion)) return false;   // misma ejecución: ya contó
+  e.fallas.push({ tipo: f.tipo, linea: f.linea, ts: f.ts, loop: f.loop, ejecucion: f.ejecucion });
+  if (e.fallas.length > 10) e.fallas.shift();
+  const n = e.fallas.length;
+  const distintas = new Set(e.fallas.map((x) => x.ejecucion)).size;
+  if (n >= MAX_FALLAS && distintas >= MAX_FALLAS && !e.prematura) {
+    e.prematura = { ejecucion: f.ejecucion, loop: f.loop, sleeps: f.sleeps === undefined ? null : f.sleeps, ts: f.ts, siguiente: null,
+      fallas: n, motivo: `Falló ${n} veces. La última: ${f.linea}` };
+  }
+  return true;
+}
+
 function procesarLinea(e, linea) {
   const t = linea.replace(RX_ANSI, '').replace(/[\x00-\x08\x0b-\x1f]/g, '').trimEnd();
   if (!t.trim()) return false;
@@ -145,19 +171,29 @@ function procesarLinea(e, linea) {
     if (e.loop !== null && e.sleeps !== null && e.sleeps < MIN_SLEEPS) {
       const ult = e.ejecuciones[e.ejecuciones.length - 1];
       const ahora = Date.now();
-      e.prematura = { ejecucion: ult ? ult.n : e.loop + 1, loop: e.loop, sleeps: e.sleeps, ts: ahora, siguiente: null };
+      const ejecucion = ult ? ult.n : e.loop + 1;
+      if ((e.fallas || []).some((x) => x.ejecucion === ejecucion)) return false;   // "idle" repetido en el mismo loop
+      const linea = `La ejecución ${ejecucion} terminó antes de tiempo: solo ${e.sleeps} sleeps`;
       e.estado = 'slot';
-      e.error = { tipo: 'slot', linea: `La ejecución ${e.prematura.ejecucion} terminó antes de tiempo: solo ${e.sleeps} sleeps`, ts: ahora, repeticiones: 1, loop: e.loop };
-      e.incidentes.push({ tipo: 'slot', linea: e.error.linea, ts: ahora, loop: e.loop });
+      e.error = { tipo: 'slot', linea, ts: ahora, repeticiones: 1, loop: e.loop };
+      e.incidentes.push({ tipo: 'slot', linea, ts: ahora, loop: e.loop });
       if (e.incidentes.length > 30) e.incidentes.shift();
-      return true;
+      return registrarFalla(e, { tipo: 'prematura', linea, ts: ahora, loop: e.loop, ejecucion, sleeps: e.sleeps });
     }
     return false;
+  }
+  // Tras "Traceback (most recent call last):" la primera línea sin sangría es el error real (solo para el texto del aviso)
+  if (e.tracebackPendiente && e.error && /^\S/.test(t) && !/^traceback/i.test(t) && !RX_EJECUCION.test(t)) {
+    e.tracebackPendiente = false;
+    e.error.linea = t.slice(0, 400);
+    if (e.incidentes.length) e.incidentes[e.incidentes.length - 1].linea = e.error.linea;
+    return true;
   }
   const c = clasificar(t);
   if (!c) return false;
   const ahora = Date.now();
   if (c.tipo === 'ejecucion') {
+    e.tracebackPendiente = false;
     const recuperado = e.estado === 'slot' || e.estado === 'sistema';
     e.loop = aLoop(c.n); e.loopTs = ahora; e.sleeps = 0;
     e.ejecuciones.push({ n: c.n, ts: ahora });
@@ -170,13 +206,20 @@ function procesarLinea(e, linea) {
   if (e.error && e.error.tipo === c.tipo && e.estado === c.tipo) {
     e.error.repeticiones++; e.error.ultima = t.slice(0, 400);
     // tras "Traceback (most recent call last):" la línea que importa es la del error real
-    if (/^traceback/i.test(e.error.linea)) { e.error.linea = t.slice(0, 400); e.incidentes[e.incidentes.length - 1].linea = e.error.linea; return true; }
+    // (se salta las líneas con sangría "  File …" y toma la primera sin sangría, ej. "ValueError: …")
+    if (/^traceback/i.test(e.error.linea) && /^\S/.test(t)) {
+      e.error.linea = t.slice(0, 400); e.incidentes[e.incidentes.length - 1].linea = e.error.linea;
+      e.tracebackPendiente = false;
+      return true;
+    }
     return false;
   }
   e.estado = c.tipo;
   e.error = { tipo: c.tipo, linea: (c.motivo || t).slice(0, 400), ts: ahora, repeticiones: 1, loop: e.loop };
   e.incidentes.push({ tipo: c.tipo, linea: e.error.linea, ts: ahora, loop: e.loop });
   if (e.incidentes.length > 30) e.incidentes.shift();
+  // SLOT CAÍDO por texto: NO es falla (no cierra nada); solo se espera la línea real si fue un Traceback
+  e.tracebackPendiente = /^traceback/i.test(e.error.linea);
   return true;
 }
 
@@ -257,4 +300,4 @@ function iniciar() {
   timer = setInterval(() => { for (let s = 1; s <= 16; s++) if (est[s]) leer(s); }, 500);
 }
 
-module.exports = { configurar, iniciar, prepararCorrida, envolver, todos, leer, clasificar, _est: est };
+module.exports = { configurar, iniciar, prepararCorrida, envolver, todos, leer, clasificar, MAX_FALLAS, _est: est, _prueba: { procesarLinea, nuevo } };
