@@ -305,6 +305,42 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
 .modal-foot { flex: none; display: flex; justify-content: flex-end; gap: 8px; padding: 16px 24px 20px; }
 #modalSlotsList { grid-auto-flow: column; grid-template-rows: repeat(8, auto); }   /* 1-8 a la izquierda, 9-16 a la derecha */
 
+/* ===== Progreso semanal ===== */
+.pg-badge { min-width: 15px; height: 16px; padding: 0 5px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; background: color-mix(in srgb, var(--primary) 12%, transparent); color: var(--primary); font: 600 9.5px/1 var(--font); font-variant-numeric: tabular-nums; }
+.pg-badge.lleno { background: color-mix(in srgb, var(--success) 14%, transparent); color: var(--success); }
+.pg-content { width: 860px; max-height: 90vh; border-radius: 24px; background: var(--surface); }
+.pg-semanas { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; padding: 6px 24px 4px; }
+.pg-sem { position: relative; display: flex; flex-direction: column; gap: 8px; padding: 14px 16px 14px; border-radius: 16px; border: 1px solid var(--contorno-suave); background: var(--surface-low); color: var(--on-surface); text-align: left; font: inherit; cursor: pointer; transition: border-color .15s, box-shadow .15s, transform .15s; }
+.pg-sem:hover { border-color: var(--contorno); }
+.pg-sem.sel { border-color: var(--primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 18%, transparent); }
+.pg-sem.actual { background: var(--surface); }
+.pg-sem-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.pg-cual { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--on-surface-variant); }
+.pg-sem.actual .pg-cual { color: var(--primary); }
+.pg-cod { font: 600 11.5px var(--mono, monospace); padding: 2px 7px; border-radius: 6px; background: var(--surface-high); color: var(--on-surface-variant); }
+.pg-num { display: flex; align-items: baseline; gap: 6px; font-variant-numeric: tabular-nums; }
+.pg-num b { font-size: 34px; font-weight: 700; line-height: 1; letter-spacing: -.02em; }
+.pg-num span { font-size: 14px; color: var(--on-surface-variant); }
+.pg-barra { height: 10px; border-radius: 5px; background: var(--surface-high); overflow: hidden; }
+.pg-barra i { display: block; height: 100%; width: 0; border-radius: 5px; background: var(--primary); transition: width .6s cubic-bezier(.2,0,0,1); }
+.pg-sem.lleno .pg-barra i { background: var(--success); }
+.pg-pie { display: flex; justify-content: space-between; gap: 6px; font-size: 11.5px; color: var(--on-surface-variant); font-variant-numeric: tabular-nums; }
+.pg-pie .ok { color: var(--success); font-weight: 600; }
+.pg-meta-fila { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 10px 24px 0; }
+.pg-meta { display: inline-flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 600; color: var(--on-surface-variant); }
+.pg-meta input { width: 64px; height: 30px; padding: 0 8px; border-radius: 8px; border: 1px solid var(--contorno-suave); background: var(--surface); color: var(--on-surface); font: 600 13px var(--font); text-align: center; }
+.pg-nota { font-size: 11.5px; color: var(--on-surface-variant); }
+.pg-lista-caja { flex: 1; min-height: 140px; display: flex; flex-direction: column; margin: 12px 24px 0; border: 1px solid var(--contorno-suave); border-radius: 14px; overflow: hidden; }
+.pg-lista-tit { flex: none; padding: 9px 14px; font-size: 12px; font-weight: 600; color: var(--on-surface-variant); background: var(--surface-low); border-bottom: 1px solid var(--contorno-suave); }
+.pg-lista { list-style: none; margin: 0; padding: 0; overflow-y: auto; max-height: 34vh; }
+.pg-lista li { display: grid; grid-template-columns: 34px minmax(0, 1.3fr) 90px 70px minmax(0, 1fr); gap: 10px; align-items: center; padding: 8px 14px; border-bottom: 1px solid var(--contorno-suave); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.pg-lista li:last-child { border-bottom: 0; }
+.pg-lista li .n { color: var(--on-surface-variant); font-size: 11px; }
+.pg-lista li .s { font: 600 12.5px var(--mono, monospace); }
+.pg-lista li .d { color: var(--on-surface-variant); }
+.pg-lista .vacio { display: block; padding: 22px 14px; text-align: center; color: var(--on-surface-variant); }
+@media (max-width: 720px) { .pg-semanas { grid-template-columns: 1fr; } }
+
 /* ===== Recursos (tanques de agua) ===== */
 .rec-content { width: 620px; }
 .rec-tanques { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; padding: 12px 24px 4px; }
@@ -988,13 +1024,16 @@ main { gap: 10px; padding: 14px 16px 0; }
     <nav class="nav-links" aria-label="Principal">
       <button class="nav-link active" type="button" aria-current="page">Slots</button>
       <button class="nav-link" type="button" onclick="abrirHistorial()">Historial</button>
-      <button id="btn-recursos" class="nav-link" type="button" title="Recursos del equipo (CPU, RAM, disco)" onclick="abrirRecursos()">Recursos</button>
+      <button id="btn-progreso" class="nav-link" type="button" title="Seriales con 8 loops por semana (meta semanal)" onclick="abrirProgreso()">Progreso<span class="pg-badge" id="pg-badge" hidden>0/45</span></button>
       <button id="btn-ntfy" class="nav-link" type="button" title="Notificaciones al celular" onclick="abrirNtfy()">Notificaciones<i class="punto-ntfy"></i></button>
       <button id="nav-act" class="nav-link" type="button" title="Mostrar u ocultar la actividad (Ctrl+B)" onclick="plegar('act')">Actividad<span class="act-tab-badge" id="act-badge" hidden>0</span></button>
       <button id="nav-con" class="nav-link" type="button" title="Mostrar u ocultar la terminal (Ctrl+J)" onclick="plegar('con')">Terminal<span class="uc-nuevas" id="uc-nuevas" hidden>0</span></button>
     </nav>
     <div class="top-actions">
       <span class="version-chip" id="version">v—</span>
+      <button id="btn-recursos" class="icon-btn ripple" type="button" title="Recursos del equipo (CPU, RAM, disco)" aria-label="Recursos del equipo" onclick="abrirRecursos()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="5" width="14" height="14" rx="2"/><rect x="9" y="9" width="6" height="6" rx="1"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3"/></svg>
+      </button>
       <button id="btn-manual" class="icon-btn ripple" type="button" title="Manual de usuario (F1)" aria-label="Manual de usuario" onclick="abrirManual()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 5.5A1.5 1.5 0 0 1 3.5 4H9a3 3 0 0 1 3 3v13a2.5 2.5 0 0 0-2.5-2.5h-6A1.5 1.5 0 0 1 2 16z"/><path d="M22 5.5A1.5 1.5 0 0 0 20.5 4H15a3 3 0 0 0-3 3v13a2.5 2.5 0 0 1 2.5-2.5h6a1.5 1.5 0 0 0 1.5-1.5z"/></svg>
       </button>
@@ -1327,6 +1366,33 @@ main { gap: 10px; padding: 14px 16px 0; }
       <div class="modal-body" id="modalSlotsList"></div>
       <div class="modal-foot">
         <button class="btn btn-text ripple" onclick="closeGlobalConfigModal()">Listo</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Progreso: seriales con 8 loops (0 a 7) por semana del serial -->
+  <div class="modal-overlay" id="progresoModal" onclick="if (event.target === this) cerrarProgreso()">
+    <div class="modal-content pg-content" role="dialog" aria-modal="true" aria-labelledby="pg-title">
+      <div class="hist-head">
+        <div>
+          <h2 id="pg-title">Progreso semanal</h2>
+          <p>Seriales que completaron sus 8 loops (0 a 7). La semana sale del serial: <b>FLG2645</b> = año 2026, semana 45.</p>
+        </div>
+        <button class="icon-btn ripple" onclick="cerrarProgreso()" aria-label="Cerrar progreso" title="Cerrar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+      <div class="pg-semanas" id="pg-semanas" role="tablist" aria-label="Semanas"></div>
+      <div class="pg-meta-fila">
+        <label class="pg-meta">Meta por semana <input id="pg-meta" type="number" min="1" max="999" step="1" value="45" aria-label="Meta por semana"></label>
+        <span class="pg-nota" id="pg-nota"></span>
+      </div>
+      <div class="pg-lista-caja">
+        <div class="pg-lista-tit" id="pg-lista-tit">Seriales</div>
+        <ol class="pg-lista" id="pg-lista"></ol>
+      </div>
+      <div class="hist-foot">
+        <button class="btn btn-text ripple" onclick="cerrarProgreso()">Cerrar</button>
       </div>
     </div>
   </div>
@@ -2875,7 +2941,7 @@ main { gap: 10px; padding: 14px 16px 0; }
     let histEstado = 'todos';
     let histAbierto = null;
     let histTimer = null;
-    ipcRenderer.invoke('historial:listar').then((l) => { if (Array.isArray(l)) historial = l; }).catch(() => {});
+    ipcRenderer.invoke('historial:listar').then((l) => { if (Array.isArray(l)) historial = l; try { pintarBadgeProgreso(); } catch (e) {} }).catch(() => {});
 
     function guardarRegistro(reg) {
       const k = historial.findIndex((r) => r.id === reg.id);
@@ -2883,6 +2949,7 @@ main { gap: 10px; padding: 14px 16px 0; }
       else historial.push(reg);
       ipcRenderer.invoke('historial:guardar', reg).catch(() => {});
       if (document.getElementById('historialModal').style.display === 'flex') pintarHistorial();
+      try { if (document.getElementById('progresoModal').style.display === 'flex') pintarProgreso(); else pintarBadgeProgreso(); } catch (e) {}
     }
 
     const fmtFecha = (ts) => ts ? new Date(ts).toLocaleDateString('es-MX', { weekday: 'short', day: '2-digit', month: 'short' }) : '—';
@@ -2995,6 +3062,103 @@ main { gap: 10px; padding: 14px 16px 0; }
       clearInterval(histTimer);
     }
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') cerrarHistorial(); });
+
+    /* ===== Progreso semanal: seriales con 8 loops (0 a 7) por semana del serial =====
+       FLG2645-xxxxx → año 2026, semana 45 (semana ISO: de lunes a domingo).
+       Cuenta cada serial una sola vez aunque se haya probado más de una vez.
+       Toma los registros del Historial que terminaron sus loops ("completado") con 8 loops o más. */
+    const PG_LOOPS = 8;
+    let pgSel = 0;   // -1 anterior · 0 actual · 1 siguiente
+    function semanaISO(d) {
+      const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+      const dia = t.getUTCDay() || 7;
+      t.setUTCDate(t.getUTCDate() + 4 - dia);
+      const anio = t.getUTCFullYear();
+      const sem = Math.ceil(((t - Date.UTC(anio, 0, 1)) / 86400000 + 1) / 7);
+      return { anio, sem };
+    }
+    function lunesDe(anio, sem) {   // lunes de la semana ISO
+      const ene4 = new Date(anio, 0, 4);
+      const lunes1 = new Date(anio, 0, 4 - ((ene4.getDay() || 7) - 1));
+      return new Date(lunes1.getFullYear(), lunes1.getMonth(), lunes1.getDate() + (sem - 1) * 7);
+    }
+    function semanaMas(base, k) { const l = lunesDe(base.anio, base.sem); l.setDate(l.getDate() + 7 * k + 3); return semanaISO(l); }
+    function semanaDeSerial(serial) {
+      const m = /FLG(\d{2})(\d{2})/i.exec(String(serial || ''));
+      if (!m) return null;
+      const sem = Number(m[2]);
+      if (sem < 1 || sem > 53) return null;
+      return { anio: 2000 + Number(m[1]), sem };
+    }
+    const pgMeta = () => { const v = parseInt(localStorage.getItem('ort_meta_semana') || '45', 10); return v > 0 && v < 1000 ? v : 45; };
+    const pgCod = (w) => String(w.anio).slice(-2) + String(w.sem).padStart(2, '0');
+    function seriales8() {
+      // un serial por renglón: el que terminó más recientemente
+      const por = new Map();
+      for (const r of historial) {
+        if (!r || r.estado !== 'completado' || !r.serial) continue;
+        if ((Number(r.totalLoops) || totalLoops(r.loops)) < PG_LOOPS) continue;
+        const w = semanaDeSerial(r.serial);
+        if (!w) continue;
+        const k = String(r.serial).toUpperCase();
+        const prev = por.get(k);
+        if (!prev || (r.salida || 0) > (prev.salida || 0)) por.set(k, { ...r, semana: w });
+      }
+      return [...por.values()];
+    }
+    function pintarProgreso() {
+      const hoy = semanaISO(new Date());
+      const meta = pgMeta();
+      const todos = seriales8();
+      const semanas = [-1, 0, 1].map((k) => {
+        const w = semanaMas(hoy, k);
+        const lista = todos.filter((r) => r.semana.anio === w.anio && r.semana.sem === w.sem).sort((a, b) => (b.salida || 0) - (a.salida || 0));
+        return { k, w, lista };
+      });
+      const fmtDia = (d) => d.toLocaleDateString('es-MX', { day: 'numeric', month: 'short' }).replace('.', '');
+      document.getElementById('pg-semanas').innerHTML = semanas.map(({ k, w, lista }) => {
+        const n = lista.length, pct = Math.min(100, n / meta * 100);
+        const l = lunesDe(w.anio, w.sem), dom = new Date(l); dom.setDate(l.getDate() + 6);
+        const lleno = n >= meta;
+        return `<button type="button" role="tab" aria-selected="${k === pgSel}" class="pg-sem${k === 0 ? ' actual' : ''}${k === pgSel ? ' sel' : ''}${lleno ? ' lleno' : ''}" data-k="${k}">
+          <span class="pg-sem-top"><span class="pg-cual">${k < 0 ? 'Anterior' : k > 0 ? 'Siguiente' : 'Actual'} · Sem ${w.sem}</span><span class="pg-cod">FLG${pgCod(w)}</span></span>
+          <span class="pg-num"><b>${n}</b><span>/ ${meta}</span></span>
+          <span class="pg-barra"><i style="width:${pct.toFixed(1)}%"></i></span>
+          <span class="pg-pie"><span>${fmtDia(l)} – ${fmtDia(dom)}</span><span class="${lleno ? 'ok' : ''}">${lleno ? '✓ Meta cumplida' : 'Faltan ' + (meta - n)}</span></span>
+        </button>`;
+      }).join('');
+      const sel = semanas.find((x) => x.k === pgSel) || semanas[1];
+      document.getElementById('pg-lista-tit').textContent = 'Seriales de la semana ' + sel.w.sem + ' (FLG' + pgCod(sel.w) + ') · ' + sel.lista.length;
+      document.getElementById('pg-lista').innerHTML = sel.lista.length
+        ? sel.lista.map((r, i) => `<li><span class="n">${i + 1}</span><span class="s">${escapar(r.serial)}</span><span>${escapar(r.pn || '—')}</span><span>Slot ${pad(r.slot || 0)}</span><span class="d">${r.salida ? fmtFecha(r.salida) + ' ' + fmtHora(r.salida) : '—'}</span></li>`).join('')
+        : '<li class="vacio">Todavía no hay seriales de esta semana con sus 8 loops completos.</li>';
+      const hoyDia = (new Date().getDay() || 7);
+      document.getElementById('pg-nota').textContent = 'Hoy: semana ' + hoy.sem + ' de ' + hoy.anio + ' · día ' + hoyDia + ' de 7 · cuenta los registros del Historial de esta PC';
+      pintarBadgeProgreso(semanas[1].lista.length, meta);
+    }
+    function pintarBadgeProgreso(n, meta) {
+      const b = document.getElementById('pg-badge');
+      if (n == null) {
+        const hoy = semanaISO(new Date());
+        n = seriales8().filter((r) => r.semana.anio === hoy.anio && r.semana.sem === hoy.sem).length;
+        meta = pgMeta();
+      }
+      b.hidden = false;
+      b.textContent = n + '/' + meta;
+      b.classList.toggle('lleno', n >= meta);
+      document.getElementById('btn-progreso').title = 'Seriales con 8 loops esta semana: ' + n + ' de ' + meta;
+    }
+    function abrirProgreso() { pgSel = 0; pintarProgreso(); document.getElementById('progresoModal').style.display = 'flex'; document.getElementById('pg-meta').value = pgMeta(); }
+    function cerrarProgreso() { document.getElementById('progresoModal').style.display = 'none'; }
+    document.getElementById('pg-semanas').addEventListener('click', (e) => { const b = e.target.closest('.pg-sem'); if (b) { pgSel = Number(b.dataset.k); pintarProgreso(); } });
+    document.getElementById('pg-meta').addEventListener('change', (e) => {
+      const v = parseInt(e.target.value, 10);
+      if (v > 0 && v < 1000) { try { localStorage.setItem('ort_meta_semana', String(v)); } catch (x) {} }
+      e.target.value = pgMeta();
+      pintarProgreso();
+    });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') cerrarProgreso(); });
+    setInterval(() => { if (document.getElementById('progresoModal').style.display === 'flex') pintarProgreso(); else pintarBadgeProgreso(); }, 60000);
 
     /* ===== Recursos: tanques de agua de CPU / RAM / disco ===== */
     let recTimer = null;
