@@ -305,6 +305,36 @@ input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; 
 .modal-foot { flex: none; display: flex; justify-content: flex-end; gap: 8px; padding: 16px 24px 20px; }
 #modalSlotsList { grid-auto-flow: column; grid-template-rows: repeat(8, auto); }   /* 1-8 a la izquierda, 9-16 a la derecha */
 
+/* ===== Retomar pruebas ===== */
+.sistema-caido .sc-retomar { background: #fff; color: var(--error); border-color: #fff; }
+.sistema-caido .sc-retomar:hover { background: rgba(255,255,255,.88); }
+:root[data-theme="dark"] .sistema-caido .sc-retomar { color: #8c1d18; }
+.tm-ret { color: var(--primary); font-weight: 600; }
+.rt-content { width: 760px; max-height: 88vh; border-radius: 24px; background: var(--surface); }
+.rt-todos { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 4px 24px 8px; font-size: 13px; }
+.rt-todos label { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; cursor: pointer; }
+.rt-todos span { color: var(--on-surface-variant); font-size: 12px; }
+.rt-todos input, .rt-fila input { width: 16px; height: 16px; accent-color: var(--primary); cursor: pointer; }
+.rt-lista { list-style: none; margin: 0 24px; padding: 0; overflow-y: auto; max-height: 52vh; border: 1px solid var(--contorno-suave); border-radius: 14px; }
+.rt-fila { display: grid; grid-template-columns: 22px 64px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 10px 14px; border-bottom: 1px solid var(--contorno-suave); cursor: pointer; }
+.rt-fila:last-child { border-bottom: 0; }
+.rt-fila:hover { background: var(--surface-low); }
+.rt-slot { font: 700 13px var(--font); }
+.rt-slot small { display: block; font-weight: 500; font-size: 10.5px; color: var(--error); }
+.rt-info { min-width: 0; }
+.rt-info b { font: 600 13px var(--mono, monospace); }
+.rt-info span { display: block; font-size: 12px; color: var(--on-surface-variant); margin-top: 2px; }
+.rt-info .rt-segs { display: flex; gap: 3px; margin-top: 6px; }
+.rt-segs i { width: 16px; height: 6px; border-radius: 3px; background: var(--surface-high); }
+.rt-segs i.hecho { background: var(--success); }
+.rt-segs i.cayo { background: var(--error); }
+.rt-segs i.prev { background: color-mix(in srgb, var(--success) 45%, var(--surface-high)); }
+.rt-nuevo { text-align: right; font-size: 12px; color: var(--on-surface-variant); white-space: nowrap; }
+.rt-nuevo b { display: block; font-size: 15px; color: var(--primary); }
+.rt-nota { margin: 10px 24px 0; font-size: 11.5px; color: var(--on-surface-variant); line-height: 1.45; }
+.rt-vacio { padding: 26px; text-align: center; color: var(--on-surface-variant); font-size: 13px; }
+.ret-tag { font-style: normal; font-size: 11px; color: var(--primary); }
+
 /* ===== Progreso semanal ===== */
 .pg-badge { min-width: 15px; height: 16px; padding: 0 5px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; background: color-mix(in srgb, var(--primary) 12%, transparent); color: var(--primary); font: 600 9.5px/1 var(--font); font-variant-numeric: tabular-nums; }
 .pg-badge.lleno { background: color-mix(in srgb, var(--success) 14%, transparent); color: var(--success); }
@@ -1086,6 +1116,7 @@ main { gap: 10px; padding: 14px 16px 0; }
     <div class="sistema-caido" id="sistema-caido" role="alert" hidden>
       <span class="sc-ico">⚠</span>
       <div class="sc-txt"><b>SISTEMA CAÍDO</b> · <span id="sc-slots"></span> <span class="sc-desde" id="sc-desde"></span><code id="sc-linea"></code></div>
+      <button class="sc-cerrar sc-retomar" onclick="abrirRetomar()" title="Volver a lanzar las unidades con los loops que les faltan">Retomar…</button>
       <button class="sc-cerrar" onclick="sistemaOculto = true; document.getElementById('sistema-caido').hidden = true;" title="Ocultar este aviso">Ocultar</button>
     </div>
     <div class="layout">
@@ -1370,6 +1401,30 @@ main { gap: 10px; padding: 14px 16px 0; }
     </div>
   </div>
 
+  <!-- Retomar: volver a lanzar las unidades que se cayeron con los loops que les faltan -->
+  <div class="modal-overlay" id="retomarModal" onclick="if (event.target === this) cerrarRetomar()">
+    <div class="modal-content rt-content" role="dialog" aria-modal="true" aria-labelledby="rt-title">
+      <div class="hist-head">
+        <div>
+          <h2 id="rt-title">Retomar pruebas</h2>
+          <p id="rt-sub">Se vuelven a lanzar con los loops que les faltan. Los loops que ya terminaron se respetan.</p>
+        </div>
+        <button class="icon-btn ripple" onclick="cerrarRetomar()" aria-label="Cerrar" title="Cerrar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+      <div class="rt-todos"><label><input type="checkbox" id="rt-todos" checked onchange="rtMarcarTodos(this.checked)"> Seleccionar todas</label><span id="rt-cuenta"></span></div>
+      <ol class="rt-lista" id="rt-lista"></ol>
+      <div class="rt-nota">Antes de lanzar se vuelve a leer cada slot: si el serial no es el mismo, ese slot se lanza normal (no se retoma). Se lanzan con 5 s entre cada uno, igual que "Lanzar todos".</div>
+      <div class="hist-foot">
+        <button class="btn btn-text peligro ripple" onclick="descartarRetomar()" title="Olvidar estas unidades (no se retoman)">Descartar</button>
+        <span style="flex:1"></span>
+        <button class="btn btn-text ripple" onclick="cerrarRetomar()">Ahora no</button>
+        <button class="btn btn-filled ripple" id="rt-ok" onclick="retomarSeleccionadas()">Retomar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Progreso: seriales con 8 loops (0 a 7) por semana del serial -->
   <div class="modal-overlay" id="progresoModal" onclick="if (event.target === this) cerrarProgreso()">
     <div class="modal-content pg-content" role="dialog" aria-modal="true" aria-labelledby="pg-title">
@@ -1565,6 +1620,7 @@ main { gap: 10px; padding: 14px 16px 0; }
     const ICONO_TERMINAL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="4" width="19" height="16" rx="3"/><path d="M7 9.5l3 2.5-3 2.5"/><path d="M12.5 15h4.5"/></svg>';
     const ICONO_IR = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6"/><path d="M20 4l-9 9"/><path d="M18 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4"/></svg>';
     const ICONO_CERRAR = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+    const ICONO_RETOMAR = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4v16l7-5 7 5V4"/><path d="M9 9l3-3 3 3"/></svg>';
     const ICONO_REINICIO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>';
     const ICONO_ENGRANE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>';
     const ICONO_AJUSTE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>';
@@ -1809,8 +1865,9 @@ main { gap: 10px; padding: 14px 16px 0; }
       for (const m of marcas) card.classList.add(m);
     }
 
-    async function processSlot(i) {
+    async function processSlot(i, ret) {
       if (activeTimers[i] || slotStates[i] === 'running') return;
+      if (!ret && retomables[i]) { delete retomables[i]; guardarRetomables(); }   // se lanzó normal: ya no se retoma
       if (conTerminal.has(i)) {
         if (!confirm(`El slot ${i} ya tiene una terminal abierta.\n\n¿Cerrarla y volver a lanzar?`)) return;
         await ipcRenderer.invoke('terminal:cerrar', i);
@@ -1898,12 +1955,21 @@ main { gap: 10px; padding: 14px 16px 0; }
       slotStates[i] = 'synced';
       borrarFicha(i);
 
-      const assignedLoops = slotLoops[i] !== undefined ? slotLoops[i] : 3;
-      logToConsole(`\n[slot ${i}] Serial ${data.serial} · P/N ${data.partNumber} · lanzando con ${assignedLoops} loops…`);
-      tele(`Slot ${pad(i)} sincronizado: <code>${escapar(data.serial)}</code> · ${assignedLoops} loops.`, 'ok');
+      let assignedLoops = slotLoops[i] !== undefined ? slotLoops[i] : 3;
+      let previos = 0, retomaDe = null;
+      if (ret) {
+        if (String(data.serial).trim().toUpperCase() === String(ret.serial).trim().toUpperCase()) {
+          assignedLoops = ret.loops; previos = ret.previos; retomaDe = ret.de || null;
+        } else {
+          tele(`Slot ${pad(i)}: <b>no se retomó</b>, el serial leído (<code>${escapar(data.serial)}</code>) no es el que se cayó (<code>${escapar(ret.serial)}</code>). Se lanza normal con ${assignedLoops} loops.`, 'warn');
+          mostrarToast({ titulo: `Slot ${pad(i)}: otra unidad`, msg: `Se leyó ${data.serial} y se esperaba ${ret.serial}. Se lanzó normal, sin retomar.`, tipo: 'err', autoOcultar: 15000 });
+        }
+      }
+      logToConsole(`\n[slot ${i}] Serial ${data.serial} · P/N ${data.partNumber} · lanzando con ${assignedLoops} loops…` + (previos ? ` (retomada: ya llevaba ${previos} ${previos === 1 ? 'loop' : 'loops'})` : ''));
+      tele(`Slot ${pad(i)} ${previos || retomaDe ? '<b>retomado</b>' : 'sincronizado'}: <code>${escapar(data.serial)}</code> · ${assignedLoops} loops` + (previos ? ` (0 a ${assignedLoops}, ya llevaba ${previos})` : '') + '.', 'ok');
 
       launchTerminalProcess(i, data.partNumber, data.serial, assignedLoops);
-      iniciarCorrida(i, assignedLoops, data.serial, data.partNumber, { entrada, intentos: intento, lecturaSeg: Math.round((Date.now() - entrada) / 1000) });
+      iniciarCorrida(i, assignedLoops, data.serial, data.partNumber, { entrada, intentos: intento, lecturaSeg: Math.round((Date.now() - entrada) / 1000), loopsPrevios: previos, retomaDe });
       setTimeout(revisarTerminales, 1200);
     }
 
@@ -1945,6 +2011,7 @@ main { gap: 10px; padding: 14px 16px 0; }
         <div class="term-menu" id="tmenu-${i}" style="display:none" onclick="event.stopPropagation()">
           <button class="tm-btn tm-term" onclick="irATerminal(${i})">${ICONO_IR}Ir a la terminal</button>
           <button class="tm-btn peligro tm-term" onclick="cerrarTerminal(${i})">${ICONO_CERRAR}Cerrar terminal</button>
+          <button class="tm-btn tm-ret" id="tm-ret-${i}" onclick="document.getElementById('tmenu-${i}').style.display='none'; abrirRetomar(${i})" hidden>${ICONO_RETOMAR}Retomar</button>
           <button class="tm-btn peligro" onclick="reiniciarUnSlot(${i})">${ICONO_REINICIO}Reiniciar slot</button>
           <button class="tm-btn cancelar" onclick="document.getElementById('tmenu-${i}').style.display='none'">Cancelar</button>
         </div>
@@ -2123,6 +2190,7 @@ main { gap: 10px; padding: 14px 16px 0; }
         if (configEl) configEl.style.display = 'none';
         terminarCorrida(i, lista.length === 16 ? 'Sistema reiniciado' : 'Slot reiniciado');
         borrarFicha(i);
+        if (retomables[i]) { delete retomables[i]; guardarRetomables(); }
       }
       const todos = lista.length === 16;
       const txt = todos ? 'Sistema reiniciado. Todos los slots libres.'
@@ -2339,6 +2407,8 @@ main { gap: 10px; padding: 14px 16px 0; }
       // sin terminal abierta, las opciones de terminal se ven pero no se pueden usar
       const hay = conTerminal.has(i);
       menu.querySelectorAll('.tm-term').forEach((b) => { b.disabled = !hay; b.title = hay ? '' : 'Este slot no tiene terminal abierta'; });
+      const rb = document.getElementById(`tm-ret-${i}`);
+      if (rb) rb.hidden = !candidatosRetomar(i).length;
       menu.style.display = menu.style.display === 'none' ? 'flex' : 'none';
     }
 
@@ -2379,6 +2449,7 @@ main { gap: 10px; padding: 14px 16px 0; }
         ponerClase(card, 'slot-card');
         card.classList.remove('tiene-terminal');
         document.getElementById(`status-${i}`).textContent = fichas[i] && fichas[i].status || 'Cerrada';
+        if (motivo !== 'Cerrada por ti') revisarRetomable(i, monitor[i] && monitor[i].estado === 'sistema' ? 'Sistema caído' : 'Se cerró la terminal');
         terminarCorrida(i, motivo === 'Cerrada por ti' ? 'Terminal cerrada desde la app' : 'La ventana de la terminal se cerró');
         tele(`Slot ${pad(i)}: terminal cerrada (${motivo.toLowerCase()}).`, 'info');
         logToConsole(`\n[slot ${i}] Terminal cerrada.`);
@@ -2447,7 +2518,8 @@ main { gap: 10px; padding: 14px 16px 0; }
     function iniciarCorrida(i, loops, serial, pn, extra = {}) {
       const inicio = Date.now();
       const hid = `${inicio}-${i}`;
-      corridas[i] = { inicio, loops, serial, pn, avisado: false, hid };
+      const previos = extra.loopsPrevios || 0;
+      corridas[i] = { inicio, loops, serial, pn, avisado: false, hid, previos };
       guardarCorridas();
       pintarLoops(i);
       const total = totalLoops(loops);
@@ -2458,22 +2530,23 @@ main { gap: 10px; padding: 14px 16px 0; }
         finEstimado: inicio + total * MS_LOOP,
         intentos: extra.intentos || 1, lecturaSeg: extra.lecturaSeg || 0,
         comando: `~/viper-test/opentest/tools/ot_regression.py ${i} ${pn} ${serial} ${loops} 1200`,
-        estado: 'corriendo'
+        estado: 'corriendo',
+        ...(extra.retomaDe || previos ? { loopsPrevios: previos, retomaDe: extra.retomaDe || null, motivo: `Retomada: ya llevaba ${previos} ${previos === 1 ? 'loop' : 'loops'}; corre los ${total} que faltan` } : {})
       });
       notificar('entrada', {
-        title: `Slot ${pad(i)} · Unidad ingresada`,
-        message: `${serial} · P/N ${pn}\nLoops: 0 a ${loops} (${total} ${total === 1 ? 'loop' : 'loops'} · ${total * HORAS_POR_LOOP} h)\nEntró: ${fechaCorta(extra.entrada || inicio)} · Termina aprox.: ${fechaCorta(inicio + total * MS_LOOP)}`,
+        title: `Slot ${pad(i)} · ${previos ? 'Unidad retomada' : 'Unidad ingresada'}`,
+        message: `${serial} · P/N ${pn}\nLoops: 0 a ${loops} (${total} ${total === 1 ? 'loop' : 'loops'} · ${total * HORAS_POR_LOOP} h)` + (previos ? `\nYa llevaba ${previos}: en total serán ${previos + total}` : '') + `\nEntró: ${fechaCorta(extra.entrada || inicio)} · Termina aprox.: ${fechaCorta(inicio + total * MS_LOOP)}`,
         tags: ['inbox_tray'], priority: 3
       });
     }
-    function terminarCorrida(i, motivo) {
+    function terminarCorrida(i, motivo, estado) {
       if (!corridas[i]) return;
       const c = corridas[i];
       if (c.hid && !c.cerradoHist) {
         const transcurrido = Date.now() - c.inicio;
         const total = totalLoops(c.loops);
         guardarRegistro({
-          id: c.hid, estado: 'detenido', salida: Date.now(),
+          id: c.hid, estado: estado || 'detenido', salida: Date.now(),
           motivo: motivo || 'Detenido',
           loopAlcanzado: Math.min(total - 1, Math.floor(transcurrido / MS_LOOP)),
           horasCorridas: +(transcurrido / 3600000).toFixed(2)
@@ -2601,7 +2674,7 @@ main { gap: 10px; padding: 14px 16px 0; }
 
       card.classList.remove('terminado');
       const queda = MS_LOOP - dentro;
-      ponerHTML(txt, `Loop <b>${actual}/${ultimo}</b> · ${queda > 0 ? duracion(queda) : 'por terminar'}`);
+      ponerHTML(txt, `Loop <b>${actual}/${ultimo}</b> · ${queda > 0 ? duracion(queda) : 'por terminar'}` + (c.previos ? ` · <i class="ret-tag" title="Retomada: ya llevaba ${c.previos} loops antes de caerse">↻ +${c.previos}</i>` : ''));
       ponerTitulo(txt, `Loop ${actual} de 0–${ultimo}` + (real ? ` · empezó ${fechaHora(m.loopTs || c.inicio)} (mensaje de la terminal)` : ' (calculado por tiempo)') +
         (fr && fr.salio && fr.enUltimo ? '\nLa consola ya regresó al prompt (normal en el último loop): la estación sigue probando sus 8 h' : '') +
 
@@ -2702,6 +2775,7 @@ main { gap: 10px; padding: 14px 16px 0; }
           tele(`<b>SISTEMA CAÍDO</b>: ${escapar(prim ? prim.linea.slice(0, 140) : '')}`, 'err');
           try { new Notification('ORT Engine · SISTEMA CAÍDO', { body: (prim ? prim.linea : '').slice(0, 180) }); } catch (e) {}
           notificar('detenido', { title: 'SISTEMA CAÍDO', message: `${lista.length === 1 ? 'Slot ' + pad(lista[0]) : 'Slots ' + lista.map(pad).join(', ')}\n${prim ? prim.linea.slice(0, 300) : ''}`, tags: ['sos'], priority: 5 });
+          mostrarToast({ titulo: 'Sistema caído', msg: `${lista.length === 1 ? 'Una unidad se quedó' : lista.length + ' unidades se quedaron'} a medias. Cuando el sistema regrese puedes retomarlas con los loops que les faltan.`, tipo: 'err', ok: 'Retomar…', accion: () => { ocultarToast(); abrirRetomar(); } });
         }
       }
     }
@@ -2841,7 +2915,10 @@ main { gap: 10px; padding: 14px 16px 0; }
           if (c.hid && !c.cerradoHist) {
             const total = totalLoops(c.loops), t = Date.now() - c.inicio;
             if (t >= total * MS_LOOP) guardarRegistro({ id: c.hid, estado: 'completado', salida: c.inicio + total * MS_LOOP, motivo: `Terminó sus ${total} loops`, loopAlcanzado: total - 1, horasCorridas: total * HORAS_POR_LOOP });
-            else guardarRegistro({ id: c.hid, estado: 'detenido', salida: Date.now(), motivo: 'La terminal se cerró mientras la app estaba cerrada', loopAlcanzado: Math.floor(t / MS_LOOP), horasCorridas: +(t / 3600000).toFixed(2) });
+            else {
+              guardarRegistro({ id: c.hid, estado: 'detenido', salida: Date.now(), motivo: 'La terminal se cerró mientras la app estaba cerrada', loopAlcanzado: Math.floor(t / MS_LOOP), horasCorridas: +(t / 3600000).toFixed(2) });
+              revisarRetomable(i, 'Se cerraron las terminales con la app cerrada (¿se reinició o se cayó la PC?)');
+            }
           }
           fichaDeCorrida(i, c);             // la tarjeta conserva serial, P/N y hasta dónde llegó
           delete corridas[k]; continue;
@@ -2865,6 +2942,14 @@ main { gap: 10px; padding: 14px 16px 0; }
       for (let i = 1; i <= 16; i++) pintarLoops(i);
       for (let i = 1; i <= 16; i++) if (!corridas[i] && fichas[i]) pintarFicha(i);
       for (const k of Object.keys(monitor)) if (corridas[k]) recibirMonitor(+k, monitor[k], true);
+      // si se cayó todo mientras la app estaba cerrada, se ofrece retomar
+      setTimeout(() => {
+        const l = candidatosRetomar();
+        if (l.length) {
+          tele(`${l.length === 1 ? 'Una unidad se quedó' : l.length + ' unidades se quedaron'} a medias. Puedes <b>retomarlas</b> con los loops que les faltan.`, 'warn');
+          abrirRetomar();
+        }
+      }, 1500);
       // y se sigue revisando cada 15 s por si abres una consola a mano con la app abierta
       setInterval(() => detectarConsolas(false), 15000);
     })();
@@ -3063,10 +3148,114 @@ main { gap: 10px; padding: 14px 16px 0; }
     }
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') cerrarHistorial(); });
 
+    /* ===== Retomar: volver a lanzar las unidades que se cayeron con los loops que les faltan =====
+       Ejemplo: loops 0 a 7 (8) y se cayó a la mitad del loop 2 → ya terminó el 0 y el 1 (2 loops),
+       le faltan 6 → se relanza con loops 0 a 5 (parámetro 5). Fórmula: nuevo = loops − loop en el que se cayó.
+       Lo que ya llevaba se guarda (loopsPrevios) y Progreso lo suma para contar los 8 loops.
+       Se puede retomar: sistema caído, slot caído, o terminales que se cerraron sin que tú las cerraras
+       (por ejemplo si se reinició o se cayó la PC). Las que fallaron por la unidad (terminó antes de
+       tiempo / muy pocos sleeps) no se ofrecen. */
+    let retomables = {};
+    try { retomables = JSON.parse(localStorage.getItem('ort_retomables') || '{}') || {}; } catch (e) { retomables = {}; }
+    function guardarRetomables() { try { localStorage.setItem('ort_retomables', JSON.stringify(retomables)); } catch (e) {} }
+    // Revisa la corrida del slot antes de cerrarla: si se quedó a medias (y no fue falla de la unidad), se guarda para retomar
+    function revisarRetomable(i, motivo) {
+      const c = corridas[i];
+      if (!c || !c.serial) return;
+      const total = totalLoops(c.loops);
+      const m = monitorDeCorrida(i) ? monitor[i] : null;
+      const f = m ? finDeCorrida(c, m) : null;
+      if (m && m.prematura) return;                                 // falla de la unidad
+      if (f && (f.terminado || f.anticipada)) return;               // terminó o falló antes de tiempo
+      if (!m && Date.now() - c.inicio >= total * MS_LOOP) return;   // por tiempo ya había terminado
+      retomables[i] = { slot: i, serial: c.serial, pn: c.pn, loops: c.loops, n: loopAprox(i), previos: c.previos || 0, de: c.hid, motivo, ts: Date.now() };
+      guardarRetomables();
+    }
+    function candidatosRetomar(solo) {
+      const l = [];
+      for (let i = 1; i <= 16; i++) {
+        if (solo && i !== solo) continue;
+        const c = corridas[i], m = monitor[i];
+        if (c && m && monitorDeCorrida(i) && !m.prematura && (m.estado === 'sistema' || m.estado === 'slot')) {
+          l.push({ slot: i, serial: c.serial, pn: c.pn, loops: c.loops, n: loopAprox(i), previos: c.previos || 0, de: c.hid, motivo: m.estado === 'sistema' ? 'Sistema caído' : 'Slot caído', vivo: true, ts: m.error ? m.error.ts : Date.now() });
+        } else if (!c && retomables[i] && slotStates[i] !== 'running' && slotStates[i] !== 'synced') {
+          l.push({ ...retomables[i], vivo: false });
+        }
+      }
+      return l;
+    }
+    let rtLista = [];
+    function abrirRetomar(solo) {
+      rtLista = candidatosRetomar(solo);
+      const ol = document.getElementById('rt-lista');
+      if (!rtLista.length) {
+        ol.innerHTML = '<li class="rt-vacio">No hay unidades a medias para retomar.</li>';
+      } else {
+        ol.innerHTML = rtLista.map((x, k) => {
+          const total = totalLoops(x.loops), nuevo = x.loops - x.n, faltan = total - x.n;
+          const hechos = x.n === 0 ? 'ningún loop completo' : x.n === 1 ? 'completó el loop 0' : `completó del 0 al ${x.n - 1} (${x.n})`;
+          const segs = Array.from({ length: x.previos }, () => '<i class="prev"></i>').join('') + Array.from({ length: total }, (_, j) => `<i class="${j < x.n ? 'hecho' : j === x.n ? 'cayo' : ''}"></i>`).join('');
+          return `<li class="rt-fila" data-k="${k}"><input type="checkbox" checked aria-label="Retomar slot ${x.slot}">
+            <span class="rt-slot">Slot ${pad(x.slot)}<small>${escapar(x.motivo.split(' (')[0])}</small></span>
+            <span class="rt-info"><b>${escapar(x.serial)}</b> · P/N ${escapar(x.pn || '—')}
+              <span>Iba en el loop ${x.n} de 0–${x.loops}: ${hechos}${x.previos ? ` · ya traía ${x.previos} de antes` : ''}</span>
+              <span class="rt-segs" title="Verde: loops completos · rojo: donde se cayó">${segs}</span></span>
+            <span class="rt-nuevo">Faltan ${faltan}<b>loops 0 a ${nuevo}</b>${faltan * HORAS_POR_LOOP} h</span></li>`;
+        }).join('');
+      }
+      ol.querySelectorAll('.rt-fila').forEach((li) => li.addEventListener('click', (e) => { if (e.target.tagName !== 'INPUT') { const cb = li.querySelector('input'); cb.checked = !cb.checked; } rtContar(); }));
+      document.getElementById('rt-sub').textContent = solo ? `Slot ${pad(solo)}: se vuelve a lanzar con los loops que le faltan.` : 'Se vuelven a lanzar con los loops que les faltan. Los loops que ya terminaron se respetan.';
+      document.getElementById('rt-todos').checked = true;
+      document.querySelector('.rt-todos').hidden = rtLista.length < 2;
+      rtContar();
+      document.getElementById('retomarModal').style.display = 'flex';
+    }
+    function rtSeleccion() { return [...document.querySelectorAll('#rt-lista .rt-fila')].filter((li) => li.querySelector('input').checked).map((li) => rtLista[+li.dataset.k]); }
+    function rtContar() {
+      const n = rtSeleccion().length;
+      document.getElementById('rt-cuenta').textContent = `${n} de ${rtLista.length}`;
+      const b = document.getElementById('rt-ok');
+      b.disabled = !n; b.textContent = n > 1 ? `Retomar ${n}` : 'Retomar';
+    }
+    function rtMarcarTodos(v) { document.querySelectorAll('#rt-lista .rt-fila input').forEach((cb) => { cb.checked = v; }); rtContar(); }
+    function cerrarRetomar() { document.getElementById('retomarModal').style.display = 'none'; }
+    function descartarRetomar() {
+      const sel = rtSeleccion();
+      if (!sel.length) return cerrarRetomar();
+      if (!confirm(`¿Olvidar ${sel.length === 1 ? 'esta unidad' : 'estas ' + sel.length + ' unidades'}? Ya no se ofrecerá retomarlas.`)) return;
+      for (const x of sel) delete retomables[x.slot];
+      guardarRetomables();
+      cerrarRetomar();
+    }
+    async function retomarUno(x) {
+      const i = x.slot;
+      if (slotStates[i] === 'running') return;
+      const nuevo = x.loops - x.n;
+      if (conTerminal.has(i)) {
+        try { await ipcRenderer.invoke('terminal:cerrar', i); } catch (e) {}
+        conTerminal.delete(i);
+        document.querySelector(`[data-slot="${i}"]`).classList.remove('tiene-terminal');
+      }
+      if (corridas[i]) terminarCorrida(i, `${x.motivo} en el loop ${x.n}/${x.loops}: se retomó con loops 0 a ${nuevo}`, 'caido');
+      delete retomables[i]; guardarRetomables();
+      slotStates[i] = 'idle';
+      logToConsole(`\n\n── Retomando slot ${i} · ${x.serial} · loops 0 a ${nuevo} (ya llevaba ${x.previos + x.n}) ──`);
+      processSlot(i, { loops: nuevo, previos: x.previos + x.n, serial: x.serial, de: x.de });
+    }
+    function retomarSeleccionadas() {
+      const sel = rtSeleccion();
+      if (!sel.length) return;
+      cerrarRetomar();
+      tele(`Retomando ${sel.length === 1 ? 'el slot ' + pad(sel[0].slot) : sel.length + ' slots (5 s entre cada uno)'}.`, 'info');
+      sel.forEach((x, k) => setTimeout(() => retomarUno(x), k * 5000));
+    }
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') cerrarRetomar(); });
+
     /* ===== Progreso semanal: seriales con 8 loops (0 a 7) por semana del serial =====
        FLG2645-xxxxx → año 2026, semana 45 (semana ISO: de lunes a domingo).
        Cuenta cada serial una sola vez aunque se haya probado más de una vez.
-       Toma los registros del Historial que terminaron sus loops ("completado") con 8 loops o más. */
+       Toma los registros del Historial que terminaron sus loops ("completado") con 8 loops o más
+       (si la unidad se retomó, cuenta los loops que ya llevaba antes de caerse). */
     const PG_LOOPS = 8;
     let pgSel = 0;   // -1 anterior · 0 actual · 1 siguiente
     function semanaISO(d) {
@@ -3097,7 +3286,7 @@ main { gap: 10px; padding: 14px 16px 0; }
       const por = new Map();
       for (const r of historial) {
         if (!r || r.estado !== 'completado' || !r.serial) continue;
-        if ((Number(r.totalLoops) || totalLoops(r.loops)) < PG_LOOPS) continue;
+        if ((Number(r.totalLoops) || totalLoops(r.loops)) + (Number(r.loopsPrevios) || 0) < PG_LOOPS) continue;   // retomadas: suma lo que ya llevaba
         const w = semanaDeSerial(r.serial);
         if (!w) continue;
         const k = String(r.serial).toUpperCase();
